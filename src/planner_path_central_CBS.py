@@ -1,7 +1,7 @@
 """CONFLICT BASED SEARCH"""
 
 import heapq
-
+import itertools
 
 DIRS = [(0,1),(1,0),(0,-1),(-1,0)]  # N,E,S,W
 
@@ -12,12 +12,12 @@ class CBS_State:
         self.theta = theta
         self.t = t
         self.action = action
-
-    def __repr__(self):
-        return f"State(x={self.x}, y={self.y}, theta={self.theta}, t={self.t}, action={self.action})"
     
     def __lt__(self, other):
         return self.t < other.t
+
+    def __repr__(self):
+        return f"State(x={self.x}, y={self.y}, theta={self.theta}, t={self.t}, action={self.action})"
 
 class CBS_Constraint:
     def __init__(self, agent, x, y, t):
@@ -25,14 +25,24 @@ class CBS_Constraint:
         self.x = x
         self.y = y
         self.t = t
+    
+    def __lt__(self, other):
+        return self.t < other.t
 
 class CBS_Node:
     def __init__(self):
         self.constraints = []
         self.paths = []
         self.cost = 0
+    
+    def __lt__(self, other):
+        return self.cost < other.cost
         
 class Planner_CBS:
+    MAX_T = 100
+    MAX_CBS_NODES = 1000
+    MAX_ASTAR_STEPS = 1000
+    
     def __init__(self):
         pass
         
@@ -53,7 +63,8 @@ class Planner_CBS:
                 if t < len(path):
                     s = path[t]
                 else:
-                    s = path[-1]
+                    continue # agent disappears
+                    # s = path[-1]
                 pos = (s.x,s.y)
                 if pos in positions:
                     return {
@@ -71,9 +82,14 @@ class Planner_CBS:
     def astar(self, grid, start, goal, agent, constraints):
         open_list = []
         visited = set()
+        steps = 0
         start_state = CBS_State(start[0], start[1], start[2], 0, "start")
         heapq.heappush(open_list, (0, start_state, []))
         while open_list:
+            steps+=1
+            if steps > Planner_CBS.MAX_ASTAR_STEPS:
+                print("abborted astar")
+                return None
             f, state, path = heapq.heappop(open_list)
             if (state.x, state.y, state.theta, state.t) in visited:
                 continue
@@ -82,6 +98,9 @@ class Planner_CBS:
             if (state.x, state.y) == goal:
                 return new_path
             next_t = state.t + 1
+            if next_t > Planner_CBS.MAX_T:
+                continue
+            
             # -------------------------------------------------
             # actions
             # -------------------------------------------------
@@ -129,9 +148,15 @@ class Planner_CBS:
         root.cost = self.compute_cost(root.paths)
         # replanning
         open_list = []
-        heapq.heappush(open_list,(root.cost,root))
+        counter = itertools.count()  # unique tie-breaker
+        heapq.heappush(open_list,(root.cost, next(counter), root))
+        nodes_expanded = 0
         while open_list:
-            _,node = heapq.heappop(open_list)
+            _, _, node = heapq.heappop(open_list)
+            nodes_expanded += 1
+            if nodes_expanded > Planner_CBS.MAX_CBS_NODES:
+                print("abborted")
+                return None
             conflict = self.detect_conflict(node.paths)
             if conflict is None:
                 return node.paths
@@ -153,11 +178,13 @@ class Planner_CBS:
                     continue
                 child.paths[agent] = new_path
                 child.cost = self.compute_cost(child.paths)
-                heapq.heappush(open_list,(child.cost,child))
+                heapq.heappush(open_list,(child.cost, next(counter), child))
         return None
 
     def convert_paths_to_routes(self, paths):
         routes = []
+        if paths is None:
+            return None
         for i,p in enumerate(paths):
             route = [s.action for s in p][1:]
             routes.append(route)
