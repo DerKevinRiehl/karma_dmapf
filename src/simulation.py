@@ -21,7 +21,8 @@ from planner_assignment_central import Planner_Assignment_Central
 ###### PARAMETERS #############################################################
 ###############################################################################
 
-GRID_SIZE = 10
+SPAWN_BORDER = 1
+GRID_SIZE = 12
 N_AGENTS = 10
 TIME_HORIZON = 100
 SIMULATION_TIME_STEPS = 50
@@ -182,14 +183,36 @@ class Grid:
         idx = np.random.choice(len(empty_indices))
         x, y = empty_indices[idx]
         return [int(x), int(y)]
-
+    
+    def _occupy_with_border(grid, x, y, border, occupied_symbol):
+        max_x = len(grid)
+        max_y = len(grid[0])
+        for dx in range(-border, border + 1):
+            for dy in range(-border, border + 1):
+                nx = x + dx
+                ny = y + dy
+                if 0 <= nx < max_x and 0 <= ny < max_y:
+                    grid[nx][ny] = occupied_symbol
+                    
     def get_random_empty_square_no_tasks(self, environment, pos=None):
         temp_occupancy_grid = self.occupancy_grid.copy()
+        # other tasks
         for task in environment.tasks:
-            temp_occupancy_grid[task.from_position[0]][task.from_position[1]] = SQUARE_SYMBOL_OCCUPIED
-            temp_occupancy_grid[task.to_position[0]][task.to_position[1]] = SQUARE_SYMBOL_OCCUPIED
+            Grid._occupy_with_border(temp_occupancy_grid, task.from_position[0], task.from_position[1], SPAWN_BORDER, SQUARE_SYMBOL_OCCUPIED)
+            Grid._occupy_with_border(temp_occupancy_grid, task.to_position[0], task.to_position[1], SPAWN_BORDER, SQUARE_SYMBOL_OCCUPIED)
+        # other agents
+        for agent in environment.agents:
+            Grid._occupy_with_border(temp_occupancy_grid, agent.current_position[0], agent.current_position[1], SPAWN_BORDER, SQUARE_SYMBOL_OCCUPIED)
+        # additional points
         if pos is not None:
-            temp_occupancy_grid[pos[0]][pos[1]] = SQUARE_SYMBOL_OCCUPIED
+            Grid._occupy_with_border(temp_occupancy_grid, pos[0], pos[1], SPAWN_BORDER, SQUARE_SYMBOL_OCCUPIED)
+        # spawn border
+        for idx in range(0, SPAWN_BORDER):
+            temp_occupancy_grid[idx,:] = SQUARE_SYMBOL_OCCUPIED
+            temp_occupancy_grid[GRID_SIZE-1-idx,:] = SQUARE_SYMBOL_OCCUPIED
+            temp_occupancy_grid[:,idx] = SQUARE_SYMBOL_OCCUPIED
+            temp_occupancy_grid[:,GRID_SIZE-1-idx] = SQUARE_SYMBOL_OCCUPIED
+        # determine empty spaces for candidates
         empty_indices = np.argwhere(temp_occupancy_grid == SQUARE_SYMBOL_EMPTY)
         if empty_indices.size == 0:
             return None 
@@ -213,6 +236,8 @@ class Task:
         # this facilitate solving path planning and less often gets aborted
         self.from_position = grid.get_random_empty_square_no_tasks(environment)
         self.to_position = grid.get_random_empty_square_no_tasks(environment, pos=self.from_position)
+        if self.from_position is None or self.to_position is None:
+            raise Exception()
         self.current_position = self.from_position.copy()
         #######################################################################
         self.assigned_agent = None
@@ -250,15 +275,19 @@ class Environment:
         )
         
     def spawn_task(self):
-        self.tasks.append(
-            Task(
-                environment=self,
-                task_id=self.determine_new_id(self.tasks), 
-                grid=self.grid,
-                time=self.time
+        try:
+            self.tasks.append(
+                Task(
+                    environment=self,
+                    task_id=self.determine_new_id(self.tasks), 
+                    grid=self.grid,
+                    time=self.time
+                )
             )
-        )
-
+        except:
+            # print("\ttoo crowded, cant spawn right now")
+            pass
+            
     def assign_open_tasks(self):
         idle_agents = [a for a in self.agents if a.is_idle()]
         open_tasks = [t for t in self.tasks if not t.is_assigned()]
@@ -312,7 +341,7 @@ environment = Environment(grid_size=GRID_SIZE)
 for n in range(0, 10):#int(N_AGENTS/2)):
     environment.spawn_agent()
 # spawn initial tasks
-for n in range(0, 30):#int(N_AGENTS/2)):
+for n in range(0, 10):#int(N_AGENTS/2)):
     environment.spawn_task()
 # simulation loop
 while environment.time < SIMULATION_TIME_STEPS:
@@ -320,10 +349,13 @@ while environment.time < SIMULATION_TIME_STEPS:
     # general update
     environment.time += 1
     # # spawn tasks randomly
-    if np.random.random()>0.8:
-        if len(environment.tasks)*2+len(environment.agents)<100-30:
-            environment.spawn_task()
-            print("\tadded task")
+    if len(environment.tasks)<len(environment.agents):
+        environment.spawn_task()
+    else:
+        if np.random.random()>0.9:
+            if len(environment.tasks)*2+len(environment.agents)<100-30:
+                environment.spawn_task()
+                # print("\tadded task")
     # handle tasks
     environment.assign_open_tasks()
     closed = environment.close_finished_tasks()

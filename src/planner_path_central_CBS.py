@@ -63,7 +63,7 @@ class Planner_CBS:
                 if t < len(path):
                     s = path[t]
                 else:
-                    continue # agent disappears
+                    continue # <- makes idle agent disappear
                     # s = path[-1]
                 pos = (s.x,s.y)
                 if pos in positions:
