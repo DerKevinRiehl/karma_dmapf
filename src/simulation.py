@@ -320,12 +320,12 @@ class Environment:
         # conduct centralized planning for running agents
         planning_relevant_agents = [agent for agent in self.agents if not agent.is_idle()]
         if len(planning_relevant_agents)>0:
-            grid = environment.grid.occupancy_grid*0
+            grid = self.grid.occupancy_grid*0
             starts = [(agent.current_position[0], agent.current_position[1], agent.current_orientation) for agent in planning_relevant_agents]
             goals = [(agent.target_position[0], agent.target_position[1]) for agent in planning_relevant_agents]
-            planner = Planner_CBS()
+            planner = Planner_CBS(grid)
             # print("\tInput for Planner:", starts, goals, "\n", grid)
-            routes = planner.plan(grid, starts, goals)
+            routes = planner.plan(starts, goals)
             # update routes
             if routes is not None:
                 for idx, agent in enumerate(planning_relevant_agents):
@@ -362,15 +362,8 @@ while environment.time < SIMULATION_TIME_STEPS:
     # handle agents
     environment.handle_agents_centralized()
     # visualize
-    # plot_grid(environment, save_filename=f"figs/x_image_{environment.time:04d}.png")
     reservation_table = ReservationTable(TIME_HORIZON, GRID_SIZE)
     for agent in environment.agents:
         reservation_table.unreserve(agent)    
         reservation_table.reserve_agent_route(agent)
     plot_environment_and_reservation(environment,reservation_table, save_filename=f"figs/x_image_{environment.time:04d}.png")
-   
-# reservation_table = ReservationTable(TIME_HORIZON, GRID_SIZE)
-# for agent in environment.agents:
-#     reservation_table.unreserve(agent)    
-#     reservation_table.reserve_agent_route(agent)
-# draw_reservation_table(reservation_table, "reservation_table.png")
