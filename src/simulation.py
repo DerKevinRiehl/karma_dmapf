@@ -11,10 +11,10 @@ interesting repo: https://github.com/GavinPHR/Multi-Agent-Path-Finding?tab=readm
 import numpy as np
 from constants import SQUARE_SYMBOL_EMPTY, SQUARE_SYMBOL_OCCUPIED, AGENT_ORIENTATIONS, AGENT_STATUS_CARRY, AGENT_STATUS_PICKUP, AGENT_STATUS_IDLE
 from constants import AGENT_ORIENTATION_SOUTH, AGENT_ORIENTATION_NORTH, AGENT_ORIENTATION_EAST, AGENT_ORIENTATION_WEST
-from visualization import plot_grid, draw_reservation_table, plot_environment_and_reservation
+from visualization import plot_environment_and_reservation
 from planner_path_central_CBS import Planner_CBS
 from planner_assignment_central import Planner_Assignment_Central
-
+from planner_path_tools import AStarPathPlanner
 
 
 ###############################################################################
@@ -22,7 +22,7 @@ from planner_assignment_central import Planner_Assignment_Central
 ###############################################################################
 
 SPAWN_BORDER = 1
-GRID_SIZE = 12
+GRID_SIZE = 14
 N_AGENTS = 10
 TIME_HORIZON = 10
 SIMULATION_TIME_STEPS = 50
@@ -367,3 +367,6 @@ while environment.time < SIMULATION_TIME_STEPS:
         reservation_table.unreserve(agent)    
         reservation_table.reserve_agent_route(agent)
     plot_environment_and_reservation(environment,reservation_table, save_filename=f"figs/x_image_{environment.time:04d}.png")
+    # report A-STAR Calls
+    print("\tA-Star Calls:", AStarPathPlanner.COUNTER)
+    AStarPathPlanner.COUNTER = 0

@@ -12,9 +12,7 @@ class Geometry:
         return min(diff, 4 - diff)
 
     def travel_time_with_rotation(position_a, position_b, start_orientation):
-        """
-        Estimate travel time including rotation cost.
-        """
+        """Estimate travel time including rotation cost."""
         ax, ay = position_a
         bx, by = position_b
         dx = bx - ax

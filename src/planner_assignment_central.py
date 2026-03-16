@@ -4,7 +4,17 @@ from scipy.optimize import linear_sum_assignment
 
 class Planner_Assignment_Central:
     def plan_assignment(idle_agents, open_tasks, time, alpha=0.2):
-        """Compute optimal agent-task assignment using Hungarian algorithm."""
+        """
+        Compute optimal agent-task assignment using Hungarian algorithm.
+        The assignment costs include travel time (manhattan distance + rotation)
+        but also the time since a task was not assigned yet.
+        This tradeoff is balanced using a factor alpha.
+        
+        idle_agents: list of agents
+        open_tasks: list of tasks
+        time: current time
+        alpha: weight for task's wait time in cost function
+        """
         num_agents = len(idle_agents)
         num_tasks = len(open_tasks)
         cost_matrix = np.zeros((num_agents, num_tasks))

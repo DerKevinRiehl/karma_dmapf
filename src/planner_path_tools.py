@@ -1,10 +1,7 @@
 """A STAR BASED PATH PLANNER"""
 
 import heapq
-
-
-DIRS = [(0,1),(1,0),(0,-1),(-1,0)]  # N,E,S,W
-DIR_NAMES = ["N", "E", "S", "W"]
+from constants import DIRS, DIR_NAMES
 
 class PathPlannerState:
     def __init__(self, x, y, theta, t, action):
@@ -22,59 +19,62 @@ class PathPlannerState:
 
 class AStarPathPlanner:
     MAX_STEPS = 1000
-    MAX_T = 100  # default maximum time for search
-
-    def __init__(self, grid):
-        self.grid = grid
+    MAX_TIME_HORIZON = 100  # default maximum time for search
+    COUNTER = 0
+    
+    def __init__(self, static_occupancy_grid):
+        self.static_occupancy_grid = static_occupancy_grid
 
     def manhattan(self, a, b):
         return abs(a[0]-b[0]) + abs(a[1]-b[1])
 
-    def astar(self, start, goal, occupancy=None, max_t=None):
+    def astar(self, start, goal, dynamic_occupancy=None, max_time_horizon=None):
         """
+        This is the implementation of a astar algorithm for a robot that needs
+        to rotate into the direction of travel, and can wait.
+        It considers obstables from a static_occupancy and dynamic_occupancy map.
+        
         start: (x, y, theta)
         goal: (x, y)
-        occupancy: 3D occupancy grid [time, x, y]
-        max_t: optional maximum time to consider
+        dynamic_occupancy: 3D occupancy grid [time, x, y]
+        max_time_horizon: optional maximum time to consider
         """
-        if max_t is None:
-            max_t = self.MAX_T
-
+        if max_time_horizon is None:
+            max_time_horizon = self.MAX_TIME_HORIZON
         open_list = []
         visited = set()
         steps = 0
         start_state = PathPlannerState(start[0], start[1], start[2], 0, "start")
         heapq.heappush(open_list, (0, start_state, []))
-
         while open_list:
+            AStarPathPlanner.COUNTER += 1
             steps += 1
+            # ABORT CONDITION: TIMEOUT
             if steps > self.MAX_STEPS:
                 print("[TIMEOUT] A* aborted")
                 return None
-
+            # EXPLORE NEW STEP
             f, state, path = heapq.heappop(open_list)
             key = (state.x, state.y, state.theta, state.t)
             if key in visited:
                 continue
             visited.add(key)
             new_path = path + [state]
-
+            # ABORT CONDITION: FOUND GOAL
             if (state.x, state.y) == goal:
                 return new_path
-
+            # EXPLORE
             next_t = state.t + 1
-            if next_t > max_t:
+            if next_t > max_time_horizon:
                 continue
-
-            # Wait
-            if occupancy is None or not occupancy[next_t, state.x, state.y]:
+            # BRANCH 1: ACTION: WAIT
+            if dynamic_occupancy is None or not dynamic_occupancy[next_t, state.x, state.y]:
                 heapq.heappush(open_list, (
                     next_t + self.manhattan((state.x, state.y), goal),
                     PathPlannerState(state.x, state.y, state.theta, next_t, "T"),
                     new_path
                 ))
-
-            # Turn left/right
+            # BRANCH 2: ACTION: ROTATE (turn left/right)
             heapq.heappush(open_list, (
                 next_t + self.manhattan((state.x, state.y), goal),
                 PathPlannerState(state.x, state.y, (state.theta - 1) % 4, next_t, "A"),
@@ -85,13 +85,12 @@ class AStarPathPlanner:
                 PathPlannerState(state.x, state.y, (state.theta + 1) % 4, next_t, "C"),
                 new_path
             ))
-
-            # Forward
+            # BRANCH 3: ACTION: MOVE FORWARD
             dx, dy = DIRS[state.theta]
             nx, ny = state.x + dx, state.y + dy
-            if 0 <= nx < self.grid.shape[0] and 0 <= ny < self.grid.shape[1]:
-                if self.grid[nx, ny] == 0:
-                    if occupancy is None or not occupancy[next_t, nx, ny]:
+            if 0 <= nx < self.static_occupancy_grid.shape[0] and 0 <= ny < self.static_occupancy_grid.shape[1]:
+                if self.static_occupancy_grid[nx, ny] == 0:
+                    if dynamic_occupancy is None or not dynamic_occupancy[next_t, nx, ny]:
                         heapq.heappush(open_list, (
                             next_t + self.manhattan((nx, ny), goal),
                             PathPlannerState(nx, ny, state.theta, next_t, DIR_NAMES[state.theta]),
@@ -102,4 +101,4 @@ class AStarPathPlanner:
     def convert_path_to_actions(self, path):
         if path is None:
             return None
-        return [s.action for s in path][1:]  # skip start
+        return [s.action for s in path][1:]  # skip start state
