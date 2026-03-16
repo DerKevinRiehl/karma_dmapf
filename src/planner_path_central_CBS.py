@@ -88,7 +88,7 @@ class Planner_CBS:
         while open_list:
             steps+=1
             if steps > Planner_CBS.MAX_ASTAR_STEPS:
-                print("abborted astar")
+                print("\t[TIMEOUT] aborted astar")
                 return None
             f, state, path = heapq.heappop(open_list)
             if (state.x, state.y, state.theta, state.t) in visited:
@@ -155,7 +155,7 @@ class Planner_CBS:
             _, _, node = heapq.heappop(open_list)
             nodes_expanded += 1
             if nodes_expanded > Planner_CBS.MAX_CBS_NODES:
-                print("abborted")
+                print("[TIMEOUT] aborted CBS")
                 return None
             conflict = self.detect_conflict(node.paths)
             if conflict is None:
