@@ -11,7 +11,7 @@ interesting repo: https://github.com/GavinPHR/Multi-Agent-Path-Finding?tab=readm
 import numpy as np
 from constants import SQUARE_SYMBOL_EMPTY, SQUARE_SYMBOL_OCCUPIED, AGENT_ORIENTATIONS, AGENT_STATUS_CARRY, AGENT_STATUS_PICKUP, AGENT_STATUS_IDLE
 from constants import AGENT_ORIENTATION_SOUTH, AGENT_ORIENTATION_NORTH, AGENT_ORIENTATION_EAST, AGENT_ORIENTATION_WEST
-from visualization import plot_grid
+from visualization import plot_grid, draw_reservation_table, plot_environment_and_reservation
 from planner_path_central_CBS import Planner_CBS
 from planner_assignment_central import Planner_Assignment_Central
 
@@ -24,7 +24,7 @@ from planner_assignment_central import Planner_Assignment_Central
 SPAWN_BORDER = 1
 GRID_SIZE = 12
 N_AGENTS = 10
-TIME_HORIZON = 100
+TIME_HORIZON = 10
 SIMULATION_TIME_STEPS = 50
 
 
@@ -34,7 +34,7 @@ SIMULATION_TIME_STEPS = 50
 ###############################################################################
 
 class ReservationTable:
-    def __init__(self):
+    def __init__(self, TIME_HORIZON, GRID_SIZE):
         self.reservation_table = np.zeros((TIME_HORIZON, GRID_SIZE, GRID_SIZE))
 
     def reserve_agent_route(self, agent):
@@ -58,6 +58,8 @@ class ReservationTable:
                 current_pos[0] -= 1
             self.reservation_table[time_counter][current_pos[0]][current_pos[1]] = agent.id
             time_counter +=1
+            if time_counter == self.reservation_table.shape[0]:
+                break
         # end
         while time_counter < TIME_HORIZON-1:
             self.reservation_table[time_counter][current_pos[0]][current_pos[1]] = agent.id
@@ -333,17 +335,15 @@ class Environment:
 ###############################################################################
 ###### MAIN ###################################################################
 ###############################################################################
-
-
 environment = Environment(grid_size=GRID_SIZE)
-
 # spawn initial agents
 for n in range(0, 10):#int(N_AGENTS/2)):
     environment.spawn_agent()
 # spawn initial tasks
-for n in range(0, 10):#int(N_AGENTS/2)):
+for n in range(0, 5):#int(N_AGENTS/2)):
     environment.spawn_task()
 # simulation loop
+SIMULATION_TIME_STEPS = 50
 while environment.time < SIMULATION_TIME_STEPS:
     print("\n\ntime:", environment.time, "agents:", len(environment.agents), "tasks:", len(environment.tasks))
     # general update
@@ -362,4 +362,15 @@ while environment.time < SIMULATION_TIME_STEPS:
     # handle agents
     environment.handle_agents_centralized()
     # visualize
-    plot_grid(environment, save_filename=f"figs/x_image_{environment.time:04d}.png")
+    # plot_grid(environment, save_filename=f"figs/x_image_{environment.time:04d}.png")
+    reservation_table = ReservationTable(TIME_HORIZON, GRID_SIZE)
+    for agent in environment.agents:
+        reservation_table.unreserve(agent)    
+        reservation_table.reserve_agent_route(agent)
+    plot_environment_and_reservation(environment,reservation_table, save_filename=f"figs/x_image_{environment.time:04d}.png")
+   
+# reservation_table = ReservationTable(TIME_HORIZON, GRID_SIZE)
+# for agent in environment.agents:
+#     reservation_table.unreserve(agent)    
+#     reservation_table.reserve_agent_route(agent)
+# draw_reservation_table(reservation_table, "reservation_table.png")
