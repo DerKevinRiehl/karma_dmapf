@@ -87,6 +87,9 @@ class Agent:
     def is_idle(self):
         return self.assigned_task is None
     
+    def is_available_soon(self):
+        return self.status==AGENT_STATUS_CARRY
+    
     def release_task(self):
         self.assigned_task = None
         self.status = AGENT_STATUS_IDLE
@@ -291,16 +294,18 @@ class Environment:
             pass
             
     def assign_open_tasks(self):
-        idle_agents = [a for a in self.agents if a.is_idle()]
+        candidate_agents = [a for a in self.agents if a.is_idle() or a.is_available_soon()]
         open_tasks = [t for t in self.tasks if not t.is_assigned()]
-        if not idle_agents or not open_tasks:
+        if not candidate_agents or not open_tasks:
             return        
-        agent_indices, task_indices = Planner_Assignment_Central.plan_assignment(idle_agents, open_tasks, self.time)
+        agent_indices, task_indices = Planner_Assignment_Central.plan_assignment(candidate_agents, open_tasks, self.time)
         for a_idx, t_idx in zip(agent_indices, task_indices):
-            agent = idle_agents[a_idx]
+            agent = candidate_agents[a_idx]
             task = open_tasks[t_idx]
-            agent.assign_task(task)
-            task.assigned_agent = agent
+            # only assign if agent is idle (otherwise it is done in later iteration)
+            if agent.is_idle():
+                agent.assign_task(task)
+                task.assigned_agent = agent
             
     def close_finished_tasks(self):
         finished_tasks = [task for task in self.tasks if task.is_finished()]
@@ -348,6 +353,8 @@ while environment.time < SIMULATION_TIME_STEPS:
     print("\n\ntime:", environment.time, "agents:", len(environment.agents), "tasks:", len(environment.tasks))
     # general update
     environment.time += 1
+    # handle agents
+    environment.handle_agents_centralized()
     # # spawn tasks randomly
     if len(environment.tasks)<len(environment.agents):
         environment.spawn_task()
@@ -359,8 +366,6 @@ while environment.time < SIMULATION_TIME_STEPS:
     # handle tasks
     environment.assign_open_tasks()
     closed = environment.close_finished_tasks()
-    # handle agents
-    environment.handle_agents_centralized()
     # visualize
     reservation_table = ReservationTable(TIME_HORIZON, GRID_SIZE)
     for agent in environment.agents:
