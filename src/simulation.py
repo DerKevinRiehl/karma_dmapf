@@ -11,7 +11,7 @@ interesting repo: https://github.com/GavinPHR/Multi-Agent-Path-Finding?tab=readm
 import numpy as np
 from constants import SQUARE_SYMBOL_EMPTY, SQUARE_SYMBOL_OCCUPIED, AGENT_ORIENTATIONS, AGENT_STATUS_CARRY, AGENT_STATUS_PICKUP, AGENT_STATUS_IDLE
 from constants import AGENT_ORIENTATION_SOUTH, AGENT_ORIENTATION_NORTH, AGENT_ORIENTATION_EAST, AGENT_ORIENTATION_WEST
-from visualization import plot_environment_and_reservation
+from visualization import plot_environment_and_reservation, make_gif
 from planner_path_central_CBS import Planner_CBS
 from planner_assignment_central import Planner_Assignment_Central
 from planner_path_tools import AStarPathPlanner
@@ -345,10 +345,11 @@ environment = Environment(grid_size=GRID_SIZE)
 for n in range(0, 10):#int(N_AGENTS/2)):
     environment.spawn_agent()
 # spawn initial tasks
-for n in range(0, 5):#int(N_AGENTS/2)):
-    environment.spawn_task()
+# for n in range(0, 0):#int(N_AGENTS/2)):
+    # environment.spawn_task()
 # simulation loop
-SIMULATION_TIME_STEPS = 50
+SIMULATION_TIME_STEPS = 100
+SIMULATION_TIME_STEPS_STOP_SPAWNING = 70
 while environment.time < SIMULATION_TIME_STEPS:
     print("\n\ntime:", environment.time, "agents:", len(environment.agents), "tasks:", len(environment.tasks))
     # general update
@@ -356,13 +357,13 @@ while environment.time < SIMULATION_TIME_STEPS:
     # handle agents
     environment.handle_agents_centralized()
     # # spawn tasks randomly
-    if len(environment.tasks)<len(environment.agents):
-        environment.spawn_task()
-    else:
-        if np.random.random()>0.9:
-            if len(environment.tasks)*2+len(environment.agents)<100-30:
-                environment.spawn_task()
-                # print("\tadded task")
+    if environment.time < SIMULATION_TIME_STEPS_STOP_SPAWNING:
+        if len(environment.tasks)<len(environment.agents):
+            environment.spawn_task()
+        else:
+            if np.random.random()>0.9:
+                if len(environment.tasks)*2+len(environment.agents)<100-30:
+                    environment.spawn_task()
     # handle tasks
     environment.assign_open_tasks()
     closed = environment.close_finished_tasks()
@@ -375,3 +376,5 @@ while environment.time < SIMULATION_TIME_STEPS:
     # report A-STAR Calls
     print("\tA-Star Calls:", AStarPathPlanner.COUNTER)
     AStarPathPlanner.COUNTER = 0
+    
+make_gif(input_pattern="figs/x_image_*.png", output_gif="animation.gif", duration=0.2)

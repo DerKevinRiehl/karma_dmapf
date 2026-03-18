@@ -5,6 +5,10 @@ from matplotlib.lines import Line2D
 from matplotlib import cm
 from constants import SQUARE_SYMBOL_OCCUPIED, AGENT_STATUS_CARRY, AGENT_STATUS_PICKUP, AGENT_STATUS_IDLE, AGENT_STATUS_DROPOFF
 from constants import AGENT_ORIENTATION_SOUTH, AGENT_ORIENTATION_NORTH, AGENT_ORIENTATION_EAST
+import imageio.v2 as imageio
+import glob
+import os
+
 
 def plot_grid(environment, save_filename=None):
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -262,7 +266,7 @@ def plot_environment_and_reservation(environment, reservation_table, save_filena
     ax2.set_zlim(-0.5, rt.shape[0]-0.5)
     ax2.set_box_aspect((1,1,1))
     ax2.legend(loc='upper left', fontsize=8)
-    ax2.set_title('Reservation Table (3D)', fontsize=14)
+    ax2.set_title('Braid Diagram (Reservation Table)', fontsize=14)
 
     plt.tight_layout()
     if save_filename:
@@ -270,3 +274,11 @@ def plot_environment_and_reservation(environment, reservation_table, save_filena
         plt.close(fig)
     else:
         plt.show()
+        
+def make_gif(input_pattern="figs/x_image_*.png", output_gif="figs/animation.gif",
+             duration=0.2):
+    # Collect and sort frames
+    frames = sorted(glob.glob(input_pattern))
+    images = [imageio.imread(f) for f in frames]
+    imageio.mimsave(output_gif, images, duration=duration)
+    
