@@ -18,13 +18,14 @@ class PathPlannerState:
         return f"PathPlannerState(x={self.x}, y={self.y}, theta={self.theta}, t={self.t}, action={self.action})"
 
 class AStarPathPlanner:
-    MAX_STEPS = 1000
-    MAX_TIME_HORIZON = 100  # default maximum time for search
+    # MAX_STEPS = 5000
+    # MAX_TIME_HORIZON = 100  # default maximum time for search
     COUNTER = 0
     
-    def __init__(self, static_occupancy_grid):
+    def __init__(self, static_occupancy_grid, astar_params):
         self.static_occupancy_grid = static_occupancy_grid
-
+        self.astar_params = astar_params
+        
     def manhattan(self, a, b):
         return abs(a[0]-b[0]) + abs(a[1]-b[1])
 
@@ -40,7 +41,7 @@ class AStarPathPlanner:
         max_time_horizon: optional maximum time to consider
         """
         if max_time_horizon is None:
-            max_time_horizon = self.MAX_TIME_HORIZON
+            max_time_horizon = self.astar_params["MAX_TIME_HORIZON"]
         open_list = []
         visited = set()
         steps = 0
@@ -50,8 +51,8 @@ class AStarPathPlanner:
             AStarPathPlanner.COUNTER += 1
             steps += 1
             # ABORT CONDITION: TIMEOUT
-            if steps > self.MAX_STEPS:
-                print("[TIMEOUT] A* aborted")
+            if steps > self.astar_params["MAX_STEPS"]:
+                print("\tASTAR[TIMEOUT] A* aborted")
                 return None
             # EXPLORE NEW STEP
             f, state, path = heapq.heappop(open_list)
@@ -96,6 +97,7 @@ class AStarPathPlanner:
                             PathPlannerState(nx, ny, state.theta, next_t, DIR_NAMES[state.theta]),
                             new_path
                         ))
+        print("\tASTAR [No valid path found]")
         return None
 
     def convert_path_to_actions(self, path):

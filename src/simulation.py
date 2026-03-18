@@ -11,6 +11,7 @@ interesting repo: https://github.com/GavinPHR/Multi-Agent-Path-Finding?tab=readm
 import numpy as np
 from constants import SQUARE_SYMBOL_EMPTY, SQUARE_SYMBOL_OCCUPIED, AGENT_ORIENTATIONS, AGENT_STATUS_CARRY, AGENT_STATUS_PICKUP, AGENT_STATUS_IDLE
 from constants import AGENT_ORIENTATION_SOUTH, AGENT_ORIENTATION_NORTH, AGENT_ORIENTATION_EAST, AGENT_ORIENTATION_WEST
+from constants import ROUTE_CONTROLLER_CENTRALIZED, ROUTE_CONTROLLER_DECENTRALIZED_RESPECT, ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_MYOPIC, ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_KAMRA
 from visualization import plot_environment_and_reservation, make_gif
 from planner_path_central_CBS import Planner_CBS
 from planner_assignment_central import Planner_Assignment_Central
@@ -24,58 +25,35 @@ from planner_path_tools import AStarPathPlanner
 SPAWN_BORDER = 1
 GRID_SIZE = 14
 N_AGENTS = 10
-TIME_HORIZON = 10
+VISUALIZATION_TIME_HORIZON = 10
+PLANNING_TIME_HORIZON = 20
 SIMULATION_TIME_STEPS = 50
+INITIAL_KARMA = 5
+SELECTED_ROUTE_CONTROL = ROUTE_CONTROLLER_DECENTRALIZED_RESPECT # ROUTE_CONTROLLER_DECENTRALIZED_RESPECT
+# SELECTED_ROUTE_CONTROL = ROUTE_CONTROLLER_CENTRALIZED
 
+# central
+astar_params = {
+    "MAX_STEPS": 1000,
+    "MAX_TIME_HORIZON": PLANNING_TIME_HORIZON
+}
+
+# decentral
+astar_params = {
+    "MAX_STEPS": 5000,
+    "MAX_TIME_HORIZON": PLANNING_TIME_HORIZON
+}
 
 
 ###############################################################################
 ###### CLASSES ################################################################
 ###############################################################################
 
-class ReservationTable:
-    def __init__(self, TIME_HORIZON, GRID_SIZE):
-        self.reservation_table = np.zeros((TIME_HORIZON, GRID_SIZE, GRID_SIZE))
-
-    def reserve_agent_route(self, agent):
-        # init
-        time_counter = 0
-        current_pos = agent.current_position.copy()
-        # first position
-        self.reservation_table[0][current_pos[0]][current_pos[1]] = agent.id
-        time_counter += 1
-        # part of route
-        for step in agent.route:
-            if step=="C" or step=="A" or step=="T":
-                pass
-            elif step=="N":
-                current_pos[1] += 1
-            elif step=="S":
-                current_pos[1] -= 1
-            elif step=="E":
-                current_pos[0] += 1
-            elif step=="W":
-                current_pos[0] -= 1
-            self.reservation_table[time_counter][current_pos[0]][current_pos[1]] = agent.id
-            time_counter +=1
-            if time_counter == self.reservation_table.shape[0]:
-                break
-        # end
-        while time_counter < TIME_HORIZON-1:
-            self.reservation_table[time_counter][current_pos[0]][current_pos[1]] = agent.id
-            time_counter +=1            
-        
-    def unreserve(self, agent):
-        self.reservation_table[self.reservation_table == agent.id] = 0
-    
-    def is_reserved(self, t, x, y):
-        return self.reservation_table[t][x][y]==0
-    
-
 class Agent:
-    def __init__(self, agent_id, grid):
+    def __init__(self, agent_id, environment, is_karma_agent=False):
         self.id = agent_id
-        self.grid = grid
+        self.environment = environment
+        self.grid = self.environment.grid
         self.current_position = self.grid.get_random_empty_square()
         self.current_orientation = np.random.choice(AGENT_ORIENTATIONS)
         self.assigned_task = None
@@ -83,6 +61,11 @@ class Agent:
         self.route = []
         self.target_position = []
         self.grid.occupy(self.current_position)
+        self.init_karma_specific_properties()
+            
+    def init_karma_specific_properties(self):
+        self.karma_balance = INITIAL_KARMA
+        self.path_planner = AStarPathPlanner(static_occupancy_grid=self.environment.static_grid.occupancy_grid, astar_params=astar_params)
         
     def is_idle(self):
         return self.assigned_task is None
@@ -94,7 +77,7 @@ class Agent:
         self.assigned_task = None
         self.status = AGENT_STATUS_IDLE
         self.target_position = []
-        self.route = ""
+        self.route = []
         
     def assign_task(self, task):
         self.assigned_task = task
@@ -258,12 +241,14 @@ class Task:
 
     
 class Environment:
-    def __init__(self, grid_size):
+    def __init__(self, grid_size, route_control):
         self.grid = Grid(grid_size=grid_size)
+        self.static_grid = Grid(grid_size=grid_size)
         self.time = 0
         self.agents = []
         self.tasks = []
         self.completed_tasks = []
+        self.route_control = route_control
         
     def determine_new_id(self, lst):
         last_agent_id = 0
@@ -275,7 +260,7 @@ class Environment:
         self.agents.append(
             Agent(
                 agent_id=self.determine_new_id(self.agents), 
-                grid=self.grid
+                environment=self
             )
         )
         
@@ -316,19 +301,42 @@ class Environment:
             self.completed_tasks.append(task)
         return len(finished_tasks)>0
 
-    def handle_agents_centralized(self):
-        # update agent target and status
+    def handle_agents(self):
+        # ROUTE EXECTUION: update agent target and status
+        self.handle_agents_route_execution()
+        # ROUTE PLANNING: for those who need
+        if self.route_control==ROUTE_CONTROLLER_CENTRALIZED:
+            self.handle_agents_route_planning_centralized()
+        elif self.route_control==ROUTE_CONTROLLER_DECENTRALIZED_RESPECT:
+            self.handle_agents_route_planning_decentralized_respect()
+    
+    def handle_agents_route_execution(self):
         for agent in self.agents:
             agent.execute_route()
             if len(agent.route)==0 and not agent.is_idle():
                 agent.update_target_position()
-        # conduct centralized planning for running agents
+    
+    def handle_agents_route_planning_centralized(self):
+        
+        print("")
+        print("Open Routes:")
+        planning_relevant_agents = [agent for agent in self.agents if len(agent.route)>0]
+        for agent in planning_relevant_agents:
+            print("\t",agent.id, agent.route)
+        print("")
+        print("Current Agent Positions:")
+        for agent in self.agents:
+            print("\t",agent.id, "\t", agent.current_position, "\t| ", agent.target_position)
+        print("")
+        print("")
+            
+        # conduct centralized planning for running agents with jobs
         planning_relevant_agents = [agent for agent in self.agents if not agent.is_idle()]
         if len(planning_relevant_agents)>0:
             grid = self.grid.occupancy_grid*0
             starts = [(agent.current_position[0], agent.current_position[1], agent.current_orientation) for agent in planning_relevant_agents]
             goals = [(agent.target_position[0], agent.target_position[1]) for agent in planning_relevant_agents]
-            planner = Planner_CBS(grid)
+            planner = Planner_CBS(grid, astar_params=astar_params)
             # print("\tInput for Planner:", starts, goals, "\n", grid)
             routes = planner.plan(starts, goals)
             # update routes
@@ -336,26 +344,101 @@ class Environment:
                 for idx, agent in enumerate(planning_relevant_agents):
                     agent.route = routes[idx]
 
+    def handle_agents_route_planning_decentralized_respect(self):
+        """
+        This works as follows: every new agent will plan its route around already existing planned routes, no negotiation, just adaption to others.
+        """
+        print("")
+        print("Open Routes:")
+        planning_relevant_agents = [agent for agent in self.agents if len(agent.route)>0]
+        for agent in planning_relevant_agents:
+            print("\t",agent.id, agent.route)
+        dynamic_occupancy_grid = self.create_dynamic_occupancy_grid(time_horizon=PLANNING_TIME_HORIZON, agent_list=self.agents)
+        print("")
+        print("Current Agent Positions:")
+        for agent in self.agents:
+            print("\t",agent.id, "\t", agent.current_position, "\t| ", agent.target_position)
+        print("")
+        print("")
+        
+        # conduct decentralized planning for running agents with jobs who finished their current route
+        planning_relevant_agents = [agent for agent in self.agents if (not agent.is_idle()) and len(agent.route)==0 and len(agent.target_position)==2]
+        for agent in planning_relevant_agents:
+            # determine dynamic_occupancy_grid given already planned routes
+            dynamic_occupancy_grid = self.create_dynamic_occupancy_grid(time_horizon=PLANNING_TIME_HORIZON, agent_list=self.agents, tabu_agent=agent)
+            path = agent.path_planner.astar(
+                start=(agent.current_position[0], agent.current_position[1], agent.current_orientation), 
+                goal=(agent.target_position[0], agent.target_position[1]), 
+                dynamic_occupancy=dynamic_occupancy_grid)
+            if path is not None:
+                route = agent.path_planner.convert_path_to_actions(path)
+                print("\trouteadded for ", agent.id, route)
+                if  len(path)==0:
+                    print("ERROR")
+                    import sys
+                    sys.exit(0)
+                agent.route = route
+            else:
+                print("\tdas is der yarak: ",agent.id)
+            
+    def create_dynamic_occupancy_grid(self, time_horizon, agent_list=None, tabu_agent=None):
+        reservation_grid = self.create_3D_reservation_grid(time_horizon, agent_list, tabu_agent)
+        dynamic_occupancy = reservation_grid != 0
+        return dynamic_occupancy
+    
+    def create_3D_reservation_grid(self, time_horizon, agent_list=None, tabu_agent=None):
+        reservation_table = np.zeros((time_horizon+1, self.grid.grid_size, self.grid.grid_size))
+        if agent_list is None:
+            agent_list = self.agents.copy()
+        for agent in agent_list:
+            if tabu_agent is not None and agent==tabu_agent:
+                continue
+            # init
+            time_counter = 0
+            current_pos = agent.current_position.copy()
+            # first position
+            if len(agent.route)>0:
+                reservation_table[0][current_pos[0]][current_pos[1]] = agent.id
+            time_counter += 1
+            # part of route
+            for step in agent.route:
+                if step=="C" or step=="A" or step=="T":
+                    pass
+                elif step=="N":
+                    current_pos[1] += 1
+                elif step=="S":
+                    current_pos[1] -= 1
+                elif step=="E":
+                    current_pos[0] += 1
+                elif step=="W":
+                    current_pos[0] -= 1
+                reservation_table[time_counter][current_pos[0]][current_pos[1]] = agent.id
+                time_counter +=1
+                if time_counter == reservation_table.shape[0]:
+                    break
+            # end
+            while time_counter < time_horizon:
+                reservation_table[time_counter][current_pos[0]][current_pos[1]] = agent.id
+                time_counter +=1       
+        return reservation_table
+
 
 ###############################################################################
 ###### MAIN ###################################################################
 ###############################################################################
-environment = Environment(grid_size=GRID_SIZE)
+environment = Environment(grid_size=GRID_SIZE, route_control=SELECTED_ROUTE_CONTROL)
 # spawn initial agents
 for n in range(0, 10):#int(N_AGENTS/2)):
     environment.spawn_agent()
-# spawn initial tasks
-# for n in range(0, 0):#int(N_AGENTS/2)):
-    # environment.spawn_task()
 # simulation loop
 SIMULATION_TIME_STEPS = 100
 SIMULATION_TIME_STEPS_STOP_SPAWNING = 70
 while environment.time < SIMULATION_TIME_STEPS:
-    print("\n\ntime:", environment.time, "agents:", len(environment.agents), "tasks:", len(environment.tasks))
+    print("\n\ntime:", environment.time, "\t| agents:", len(environment.agents), "\t| tasks:", len(environment.tasks))
     # general update
     environment.time += 1
     # handle agents
-    environment.handle_agents_centralized()
+    environment.handle_agents()
     # # spawn tasks randomly
     if environment.time < SIMULATION_TIME_STEPS_STOP_SPAWNING:
         if len(environment.tasks)<len(environment.agents):
@@ -368,13 +451,9 @@ while environment.time < SIMULATION_TIME_STEPS:
     environment.assign_open_tasks()
     closed = environment.close_finished_tasks()
     # visualize
-    reservation_table = ReservationTable(TIME_HORIZON, GRID_SIZE)
-    for agent in environment.agents:
-        reservation_table.unreserve(agent)    
-        reservation_table.reserve_agent_route(agent)
-    plot_environment_and_reservation(environment,reservation_table, save_filename=f"figs/x_image_{environment.time:04d}.png")
+    plot_environment_and_reservation(environment, time_horizon=VISUALIZATION_TIME_HORIZON, save_filename=f"figs/x_image_{environment.time:04d}.png")
     # report A-STAR Calls
     print("\tA-Star Calls:", AStarPathPlanner.COUNTER)
     AStarPathPlanner.COUNTER = 0
     
-make_gif(input_pattern="figs/x_image_*.png", output_gif="animation.gif", duration=0.2)
+make_gif(input_pattern="figs/x_image_*.png", output_gif=f"animation_{SELECTED_ROUTE_CONTROL}.gif", duration=0.2)

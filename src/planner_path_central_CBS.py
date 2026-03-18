@@ -35,12 +35,12 @@ class Planner_CBS:
     The goal is find a set of paths (plan) that minimizes collective travel time.
     """
     MAX_T = 100
-    MAX_CBS_NODES = 1000
-    MAX_ASTAR_STEPS = 1000
-    
-    def __init__(self, grid):
+    MAX_CBS_NODES = 5000
+    MAX_ASTAR_STEPS = 5000
+    MAX_IDLE_TIME_CONSIDERED = 5
+    def __init__(self, grid, astar_params):
         self.grid = grid
-        self.astar_planner = AStarPathPlanner(grid)
+        self.astar_planner = AStarPathPlanner(grid, astar_params=astar_params)
     
     def detect_conflict(self, paths):
         max_len = max(len(p) for p in paths)
@@ -49,6 +49,8 @@ class Planner_CBS:
             for i,path in enumerate(paths):
                 if t < len(path):
                     s = path[t]
+                elif t<len(path)+Planner_CBS.MAX_IDLE_TIME_CONSIDERED:
+                    s = path[-1]
                 else:
                     continue # <- makes idle agent disappear
                     # s = path[-1]

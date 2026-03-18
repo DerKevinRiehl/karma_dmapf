@@ -168,10 +168,8 @@ def draw_reservation_table(reservation_table, save_filename=None):
         plt.close(fig)
     else:
         plt.show()
-        
-
-
-def plot_environment_and_reservation(environment, reservation_table, save_filename=None):
+    
+def plot_environment_and_reservation(environment, time_horizon, save_filename=None):
     """
     Plots side by side:
     - Left: 2D grid with agents and tasks
@@ -246,7 +244,7 @@ def plot_environment_and_reservation(environment, reservation_table, save_filena
 
     # -------------------- RIGHT: 3D reservation table --------------------
     ax2 = fig.add_subplot(1, 2, 2, projection='3d')
-    rt = reservation_table.reservation_table
+    rt = environment.create_3D_reservation_grid(time_horizon)
     t_idx, x_idx, y_idx = np.where(rt > 0)
     agent_ids = rt[t_idx, x_idx, y_idx]
     unique_agents = np.unique(agent_ids)
