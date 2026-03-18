@@ -18,8 +18,6 @@ class PathPlannerState:
         return f"PathPlannerState(x={self.x}, y={self.y}, theta={self.theta}, t={self.t}, action={self.action})"
 
 class AStarPathPlanner:
-    # MAX_STEPS = 5000
-    # MAX_TIME_HORIZON = 100  # default maximum time for search
     COUNTER = 0
     
     def __init__(self, static_occupancy_grid, astar_params):
@@ -29,7 +27,7 @@ class AStarPathPlanner:
     def manhattan(self, a, b):
         return abs(a[0]-b[0]) + abs(a[1]-b[1])
 
-    def astar(self, start, goal, dynamic_occupancy=None, max_time_horizon=None):
+    def astar(self, start, goal, dynamic_occupancy=None):
         """
         This is the implementation of a astar algorithm for a robot that needs
         to rotate into the direction of travel, and can wait.
@@ -40,8 +38,6 @@ class AStarPathPlanner:
         dynamic_occupancy: 3D occupancy grid [time, x, y]
         max_time_horizon: optional maximum time to consider
         """
-        if max_time_horizon is None:
-            max_time_horizon = self.astar_params["MAX_TIME_HORIZON"]
         open_list = []
         visited = set()
         steps = 0
@@ -52,7 +48,7 @@ class AStarPathPlanner:
             steps += 1
             # ABORT CONDITION: TIMEOUT
             if steps > self.astar_params["MAX_STEPS"]:
-                print("\tASTAR[TIMEOUT] A* aborted")
+                print("\t\tASTAR [TIMEOUT] A* aborted")
                 return None
             # EXPLORE NEW STEP
             f, state, path = heapq.heappop(open_list)
@@ -66,7 +62,7 @@ class AStarPathPlanner:
                 return new_path
             # EXPLORE
             next_t = state.t + 1
-            if next_t > max_time_horizon:
+            if next_t > self.astar_params["MAX_TIME_HORIZON"]:
                 continue
             # BRANCH 1: ACTION: WAIT
             if dynamic_occupancy is None or not dynamic_occupancy[next_t, state.x, state.y]:
@@ -97,7 +93,7 @@ class AStarPathPlanner:
                             PathPlannerState(nx, ny, state.theta, next_t, DIR_NAMES[state.theta]),
                             new_path
                         ))
-        print("\tASTAR [No valid path found]")
+        print("\t\tASTAR [No valid path found in given time horizon]")
         return None
 
     def convert_path_to_actions(self, path):

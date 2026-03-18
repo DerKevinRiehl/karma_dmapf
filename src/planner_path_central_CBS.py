@@ -34,12 +34,9 @@ class Planner_CBS:
     Every branch (CBS_Node) of the search tree represents a set of different paths for all agents.
     The goal is find a set of paths (plan) that minimizes collective travel time.
     """
-    MAX_T = 100
-    MAX_CBS_NODES = 5000
-    MAX_ASTAR_STEPS = 5000
-    MAX_IDLE_TIME_CONSIDERED = 5
-    def __init__(self, grid, astar_params):
+    def __init__(self, grid, cbs_params, astar_params):
         self.grid = grid
+        self.cbs_params = cbs_params
         self.astar_planner = AStarPathPlanner(grid, astar_params=astar_params)
     
     def detect_conflict(self, paths):
@@ -49,7 +46,7 @@ class Planner_CBS:
             for i,path in enumerate(paths):
                 if t < len(path):
                     s = path[t]
-                elif t<len(path)+Planner_CBS.MAX_IDLE_TIME_CONSIDERED:
+                elif t < len(path)+self.cbs_params["MAX_IDLE_TIME_CONSIDERED"]:
                     s = path[-1]
                 else:
                     continue # <- makes idle agent disappear
@@ -69,7 +66,7 @@ class Planner_CBS:
         return sum(len(p) for p in paths)
 
     def get_dynamic_occupancy_grid(self, constraints, agent):
-        dynamic_occupancy = np.zeros((Planner_CBS.MAX_T + 1, self.grid.shape[0], self.grid.shape[1]), dtype=bool)
+        dynamic_occupancy = np.zeros((self.astar_planner.astar_params["MAX_TIME_HORIZON"] + 1, self.grid.shape[0], self.grid.shape[1]), dtype=bool)
         for c in constraints:
             if c.agent == agent:
                 dynamic_occupancy[c.t, c.x, c.y] = True
@@ -80,8 +77,7 @@ class Planner_CBS:
         dynamic_occupancy = self.get_dynamic_occupancy_grid(constraints, agent)
         return self.astar_planner.astar(start=start, 
                                         goal=goal, 
-                                        dynamic_occupancy=dynamic_occupancy, 
-                                        max_time_horizon=Planner_CBS.MAX_T)
+                                        dynamic_occupancy=dynamic_occupancy)
         
     def plan_cbs(self, starts, goals):
         root = CBS_Node()
@@ -101,8 +97,8 @@ class Planner_CBS:
             _, _, node = heapq.heappop(open_list)
             nodes_expanded += 1
             # ABORT CONDITION: TIMEOUT
-            if nodes_expanded > Planner_CBS.MAX_CBS_NODES:
-                print("[TIMEOUT] aborted CBS")
+            if nodes_expanded > self.cbs_params["MAX_CBS_NODES"]:
+                print("\t\t CBS [TIMEOUT]")
                 return None
             # Detect conflicts
             conflict = self.detect_conflict(node.paths)
@@ -125,6 +121,7 @@ class Planner_CBS:
                 child.paths[agent] = new_path
                 child.cost = self.compute_cost(child.paths)
                 heapq.heappush(open_list, (child.cost, next(counter), child))
+        print("\t\tCBS [No conflict-free set of paths could be found in given time horizon]")
         return None
 
     def convert_paths_to_routes(self, paths):
