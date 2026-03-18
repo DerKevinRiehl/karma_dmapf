@@ -96,7 +96,39 @@ class AStarPathPlanner:
         print("\t\tASTAR [No valid path found in given time horizon]")
         return None
 
-    def convert_path_to_actions(self, path):
+    def convert_path_to_route(self, path):
         if path is None:
             return None
         return [s.action for s in path][1:]  # skip start state
+
+    def convert_route_to_path(self, agent):
+        """
+        Reconstruct a path (list of PathPlannerState) from a start state and action list.
+    
+        start: (x, y, theta)
+        actions: list of actions (e.g. ["T", "A", "C", "N", ...])
+        """
+        if agent.route is None:
+            return None
+        path = []
+        x = agent.current_position[0]
+        y = agent.current_position[1]
+        theta = agent.current_orientation
+        t = 0
+        # include start state
+        path.append(PathPlannerState(x, y, theta, t, "start"))
+        for action in agent.route:
+            t += 1
+            if action == "T":  # wait
+                pass
+            elif action == "A":  # rotate left
+                theta = (theta - 1) % 4
+            elif action == "C":  # rotate right
+                theta = (theta + 1) % 4
+            else:
+                # assume forward movement (N/E/S/W from DIR_NAMES)
+                dx, dy = DIRS[theta]
+                x += dx
+                y += dy
+            path.append(PathPlannerState(x, y, theta, t, action))
+        return path

@@ -11,7 +11,7 @@ interesting repo: https://github.com/GavinPHR/Multi-Agent-Path-Finding?tab=readm
 import numpy as np
 from constants import SQUARE_SYMBOL_EMPTY, SQUARE_SYMBOL_OCCUPIED, AGENT_ORIENTATIONS, AGENT_STATUS_CARRY, AGENT_STATUS_PICKUP, AGENT_STATUS_IDLE
 from constants import AGENT_ORIENTATION_SOUTH, AGENT_ORIENTATION_NORTH, AGENT_ORIENTATION_EAST, AGENT_ORIENTATION_WEST
-from constants import ROUTE_CONTROLLER_CENTRALIZED, ROUTE_CONTROLLER_DECENTRALIZED_RESPECT, ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_MYOPIC, ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_KAMRA
+from constants import ROUTE_CONTROLLER_CENTRALIZED, ROUTE_CONTROLLER_DECENTRALIZED_RESPECT, ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC, ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC, ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_KAMRA
 from visualization import plot_environment_and_reservation, make_gif
 from planner_path_central_CBS import Planner_CBS
 from planner_assignment_central import Planner_Assignment_Central
@@ -30,8 +30,11 @@ PLANNING_TIME_HORIZON = 50
 SIMULATION_TIME_STEPS = 50
 INITIAL_KARMA = 5
 SELECTED_ROUTE_CONTROL = ROUTE_CONTROLLER_CENTRALIZED
-# SELECTED_ROUTE_CONTROL = ROUTE_CONTROLLER_DECENTRALIZED_RESPECT
-SELECTED_ROUTE_CONTROL = ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_MYOPIC
+SELECTED_ROUTE_CONTROL = ROUTE_CONTROLLER_DECENTRALIZED_RESPECT
+SELECTED_ROUTE_CONTROL = ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC
+SELECTED_ROUTE_CONTROL = ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC
+
+IDLING_NEIGHBORHOOD_SEARCH_RANGE = 2
 
 astar_params = {
     "MAX_STEPS": 5000,
@@ -43,6 +46,8 @@ cbs_params = {
     "MAX_IDLE_TIME_CONSIDERED": 5,
     "PLANNING_HORIZON": 100
 }
+
+
 
 
 ###############################################################################
@@ -154,6 +159,93 @@ class Agent:
         if self.current_orientation<AGENT_ORIENTATION_NORTH:
             self.current_orientation = AGENT_ORIENTATION_WEST
 
+    def _determine_intersection_free_path(self, dynamic_occupancy_grid):
+        path = self.path_planner.astar(
+            start=(self.current_position[0], self.current_position[1], self.current_orientation), 
+            goal=(self.target_position[0], self.target_position[1]), 
+            dynamic_occupancy=dynamic_occupancy_grid)
+        return path 
+    
+    def _determine_idle_parking_path(self, dynamic_occupancy_grid):
+        x0, y0 = self.current_position
+        # determine empty cells for idling nearby
+        target_candidates = []
+        for dx in range(-IDLING_NEIGHBORHOOD_SEARCH_RANGE, IDLING_NEIGHBORHOOD_SEARCH_RANGE+1):
+            for dy in range(-IDLING_NEIGHBORHOOD_SEARCH_RANGE, IDLING_NEIGHBORHOOD_SEARCH_RANGE+1):
+                # skip the current cell itself
+                if dx == 0 and dy == 0:
+                    continue
+                # explore probe
+                probe_pos_x = x0 + dx
+                probe_pos_y = y0 + dy
+                # grid bounds check
+                if probe_pos_x < 0 or probe_pos_y < 0:
+                    continue
+                if probe_pos_x >= dynamic_occupancy_grid.shape[1] or probe_pos_y >= dynamic_occupancy_grid.shape[2]:
+                    continue
+                # cell must be free at all times in the horizon
+                # dynamic_occupancy_grid[:, x, y] is a 1D boolean array over time
+                if not dynamic_occupancy_grid[:, probe_pos_x, probe_pos_y].any():
+                    target_candidates.append([probe_pos_x, probe_pos_y])
+        # sort them closest to origin (self.current_position)
+        target_candidates.sort(
+            key=lambda p: (p[0] - x0) ** 2 + (p[1] - y0) ** 2
+        )  # squared distance is enough for ordering[web:19][web:22]
+        # if some found, check if there is a path to one
+        for target_candidate in target_candidates:
+            path = self.path_planner.astar(
+                start=(self.current_position[0], self.current_position[1], self.current_orientation), 
+                goal=(target_candidate[0], target_candidate[1]), 
+                dynamic_occupancy=dynamic_occupancy_grid)
+            if not path is None:
+                return path
+        return None
+    
+    def plan_route_decentralized_respectful(self):
+        # determine dynamic_occupancy_grid given all already planned routes
+        dynamic_occupancy_grid = self.environment.create_dynamic_occupancy_grid(time_horizon=PLANNING_TIME_HORIZON, agent_list=self.environment.agents, tabu_agent=self)
+        # determine possible, intersection free path
+        path = self._determine_intersection_free_path(dynamic_occupancy_grid)
+        if path is not None:
+            route = self.path_planner.convert_path_to_route(path)
+            # print("\trouteadded for ", agent.id, route)
+            self.route = route
+        
+    def determine_cost_to_change(self, to_avoid_path):
+        current_cost = len(self.route)
+        # determine dynamic_occupancy_grid given all already planned routes
+        dynamic_occupancy_grid = self.environment.create_dynamic_occupancy_grid(time_horizon=PLANNING_TIME_HORIZON, agent_list=self.environment.agents, tabu_agent=self)
+        # add to_avoid_path to dynamic_occupancy grid
+        for state in to_avoid_path:
+            dynamic_occupancy_grid[state.t][state.x][state.y] = True
+            
+        # if you have a target
+        if len(self.target_position)>0:  
+            # determine possible, intersection free path
+            changed_path = self._determine_intersection_free_path(dynamic_occupancy_grid)
+            if changed_path is not None:
+                changed_route = self.path_planner.convert_path_to_route(changed_path)
+                changed_cost = len(changed_route)
+                return (changed_cost-current_cost), changed_path
+        else:
+            # determine if there is any free position nearby to idle parking
+            changed_path = self._determine_idle_parking_path(dynamic_occupancy_grid)
+            return -1, changed_path
+        return 1000, changed_path
+        
+    def change_path_to_satisfy(self, change_to_path):
+        alternative_route = self.path_planner.convert_path_to_route(change_to_path)
+        self.route = alternative_route
+        
+    def do_I_agree_to_change_egoistically(self, requested_conflicting_path):
+        cost_to_change, alternative_path = self.determine_cost_to_change(requested_conflicting_path)
+        if cost_to_change<=0:
+            alternative_route = self.path_planner.convert_path_to_route(alternative_path)
+            self.route = alternative_route
+            return True
+        else:
+            return False
+            
 class Grid:
     def __init__(self, grid_size):
         self.grid_size = grid_size
@@ -345,8 +437,10 @@ class Environment:
             self.handle_agents_route_planning_centralized()
         elif self.route_control==ROUTE_CONTROLLER_DECENTRALIZED_RESPECT:
             self.handle_agents_route_planning_decentralized_respect()
-        elif self.route_control==ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_MYOPIC:
-            self.handle_agents_route_planning_decentralized_negotiate_myopic()
+        elif self.route_control==ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC:
+            self.handle_agents_route_planning_decentralized_negotiate_egoistic()
+        elif self.route_control==ROUTE_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC:
+            self.handle_agents_route_planning_decentralized_negotiate_altruistic()
     
     def handle_agents_route_execution(self):
         for agent in self.agents:
@@ -361,7 +455,7 @@ class Environment:
         for agent in planning_relevant_agents:
             print("\t\t",agent.id, agent.route)
         print("")
-        print("Current Agent Positions:")
+        print("\tCurrent Agent Positions:")
         for agent in self.agents:
             print("\t\t",agent.id, "\t", agent.current_position, "\t| ", agent.target_position)
         print("")
@@ -394,21 +488,252 @@ class Environment:
         # conduct decentralized planning for running agents with jobs who finished their current route
         planning_relevant_agents = [agent for agent in self.agents if (not agent.is_idle()) and len(agent.route)==0 and len(agent.target_position)==2]
         for agent in planning_relevant_agents:
-            # determine dynamic_occupancy_grid given already planned routes
-            dynamic_occupancy_grid = self.create_dynamic_occupancy_grid(time_horizon=PLANNING_TIME_HORIZON, agent_list=self.agents, tabu_agent=agent)
-            path = agent.path_planner.astar(
-                start=(agent.current_position[0], agent.current_position[1], agent.current_orientation), 
-                goal=(agent.target_position[0], agent.target_position[1]), 
-                dynamic_occupancy=dynamic_occupancy_grid)
-            if path is not None:
-                route = agent.path_planner.convert_path_to_actions(path)
-                # print("\trouteadded for ", agent.id, route)
-                agent.route = route
+            agent.plan_route_decentralized_respectful()
+    
+    def get_agent(self, agent_id):
+        for agent in self.agents:
+            if agent.id == agent_id:
+                return agent
+        return None
+    
+    def detect_conflicts(self, path, reservation_table_complete):
+        conflicts = []
+        conflicting_agents = []
+        for state in path:
+            t = state.t
+            if t >= reservation_table_complete.shape[0]:
+                break
+            x = state.x
+            y = state.y
+            occupying_agent = reservation_table_complete[t][x][y]
+            if occupying_agent != 0:
+                if occupying_agent not in conflicting_agents:
+                    conflicts.append({
+                        "time": t,
+                        "position": (x, y),
+                        "conflicting_agent": int(occupying_agent)
+                    })
+                    conflicting_agents.append(occupying_agent)
+        return conflicts
 
-    def handle_agents_route_planning_decentralized_negotiate_myopic(self):
-        pass
+    def handle_agents_route_planning_decentralized_negotiate_egoistic(self):
+        """
+        This works as follows: every new agent will plan its route shortest.
+        Then checks if it is conflicting with others.
+        If not take it.
+        If conflicting, negotiate with that specific one...
+            - if other agrees (as makes no difference to him)
+                do change for both agents
+            - else
+                need to replan considering this restriction
+        """
+        self.print_debug_log()      
+        # conduct decentralized planning for running agents with jobs who finished their current route
+        planning_relevant_agents = [agent for agent in self.agents if (not agent.is_idle()) and len(agent.route)==0 and len(agent.target_position)==2]
+        for agent in planning_relevant_agents:
+            # try for this agent to plan, given the restrictions it step by step considers
+            planning_finished = False
+            agents_considered = []
+            # determine plan with negotiating with others
+            current_path = None
+            agents_had_conflict_with = []
+            # safety guard to avoid infinite negotiation loops
+            max_iterations = max(10, len(self.agents) * 2)
+            iter_count = 0
+            while not planning_finished:
+                iter_count += 1
+                if iter_count > max_iterations:
+                    print(f"\tMax negotiation iterations reached for agent {agent.id}, aborting negotiation")
+                    break
+                # rebuild full reservation table each iteration so we always check conflicts against the
+                # latest routes other agents may have switched to during negotiation
+                reservation_table_complete = self.create_3D_reservation_grid(
+                    time_horizon=PLANNING_TIME_HORIZON,
+                    agent_list=self.agents,
+                    tabu_agent=agent
+                )
+                print("trying to finish planning for agent", agent.id, "considered:", len(agents_considered))
+                # determine shortest path (given considered restrictions)
+                dynamic_occupancy_grid = self.create_dynamic_occupancy_grid(time_horizon=PLANNING_TIME_HORIZON, agent_list=agents_considered, tabu_agent=agent)
+                current_path = agent.path_planner.astar(
+                    start=(agent.current_position[0], agent.current_position[1], agent.current_orientation), 
+                    goal=(agent.target_position[0], agent.target_position[1]), 
+                    dynamic_occupancy=dynamic_occupancy_grid
+                )
+                # if cannot plan, just abort for now
+                if current_path is None:
+                    planning_finished = True
+                    break
+                # determine conflicts with current plan
+                conflicts = self.detect_conflicts(current_path, reservation_table_complete)
+                # if no conflicts, found the path and can quit
+                if len(conflicts)==0:
+                    planning_finished = True
+                    break
+                # try to solve found conflicts
+                print("\tPlanning for agent", agent.id, "found", len(conflicts), "conflicts")
+                # try to resolve conflicts with everyone
+                all_conflicts_resolved = True                
+                for conflict in conflicts:
+                    print("\tchecking the conflict", conflict)
+                    conflicting_agent = self.get_agent(conflict["conflicting_agent"])
+                    # call conflicting agent to replan his stuff
+                    # see if he minds to do it differently, maybe same duration
+                    agreement_to_solve_conflict = conflicting_agent.do_I_agree_to_change_egoistically(requested_conflicting_path=current_path)
+                    # if agrees, continue
+                    if agreement_to_solve_conflict:
+                        continue
+                    # otherwise, break the loop
+                    else:
+                        all_conflicts_resolved = False
+                        break
+                # if others changed their plans and agreed, we can keep this
+                if all_conflicts_resolved:
+                    planning_finished = True
+                    break
+                # otherwise, didnt work out, so we have to add them into our agents_considered constraints
+                for conflict in conflicts:
+                    conflicting_agent = self.get_agent(conflict["conflicting_agent"])
+                    agents_considered.append(conflicting_agent)
+                    agents_considered = list(set(agents_considered))
+                    if not conflicting_agent in agents_had_conflict_with:
+                        agents_had_conflict_with.append(conflicting_agent)
+                    else: # repeating conflicts, avoid inifinite loop
+                        current_path = None
+                        planning_finished = True
+                        break
+            # if successful, assign it
+            if current_path is not None:
+                current_route = agent.path_planner.convert_path_to_route(current_path)
+                agent.route = current_route
+                print("successfully done")
+            else:
+                # otherwise use planning respectfully (conflict-avoiding)
+                agent.plan_route_decentralized_respectful()
+                print("negotiations failed")
 
-
+    def handle_agents_route_planning_decentralized_negotiate_altruistic(self):
+        """
+        This works as follows: every new agent will plan its route shortest.
+        Then checks if it is conflicting with others.
+        If not take it.
+        If conflicting, negotiate with that specific one...
+            - if other not as worse off
+                do change for both agents
+            - else
+                need to replan considering this restriction
+        """
+        self.print_debug_log()      
+        # conduct decentralized planning for running agents with jobs who finished their current route
+        planning_relevant_agents = [agent for agent in self.agents if (not agent.is_idle()) and len(agent.route)==0 and len(agent.target_position)==2]
+        for agent in planning_relevant_agents:
+            # try for this agent to plan, given the restrictions it step by step considers
+            planning_finished = False
+            agents_considered = []
+            # determine plan with negotiating with others
+            current_path = None
+            agents_had_conflict_with = []
+            # safety guard to avoid infinite negotiation loops
+            max_iterations = max(10, len(self.agents) * 2)
+            iter_count = 0
+            while not planning_finished:
+                iter_count += 1
+                if iter_count > max_iterations:
+                    print(f"\tMax negotiation iterations reached for agent {agent.id}, aborting negotiation")
+                    break
+                # rebuild full reservation table each iteration so we always check conflicts against the
+                # latest routes other agents may have switched to during negotiation
+                reservation_table_complete = self.create_3D_reservation_grid(
+                    time_horizon=PLANNING_TIME_HORIZON,
+                    agent_list=self.agents,
+                    tabu_agent=agent
+                )
+                print("trying to finish planning for agent", agent.id, "considered:", len(agents_considered))
+                # determine shortest path (given considered restrictions)
+                dynamic_occupancy_grid = self.create_dynamic_occupancy_grid(time_horizon=PLANNING_TIME_HORIZON, agent_list=agents_considered, tabu_agent=agent)
+                current_path = agent.path_planner.astar(
+                    start=(agent.current_position[0], agent.current_position[1], agent.current_orientation), 
+                    goal=(agent.target_position[0], agent.target_position[1]), 
+                    dynamic_occupancy=dynamic_occupancy_grid
+                )
+                # if cannot plan, just abort for now
+                if current_path is None:
+                    planning_finished = True
+                    break
+                # determine conflicts with current plan
+                conflicts = self.detect_conflicts(current_path, reservation_table_complete)
+                # if no conflicts, found the path and can quit
+                if len(conflicts)==0:
+                    planning_finished = True
+                    break
+                # try to solve found conflicts
+                print("\tPlanning for agent", agent.id, "found", len(conflicts), "conflicts")
+                # try to resolve conflicts with everyone
+                all_conflicts_resolved = True                
+                for conflict in conflicts:
+                    print("\tchecking the conflict", conflict)
+                    conflicting_agent = self.get_agent(conflict["conflicting_agent"])
+                    # call conflicting agent to replan his stuff
+                    # see if he minds to do it differently, maybe same duration
+                    agreement_to_solve_conflict = conflicting_agent.do_I_agree_to_change_egoistically(requested_conflicting_path=current_path)
+                    
+                    
+                    # call conflicting_agent to see his costs
+                    cost_other, alternative_path_other = conflicting_agent.determine_cost_to_change(to_avoid_path=current_path)
+                    
+                    # determine my cost
+                    agent.route = agent.path_planner.convert_path_to_route(current_path)
+                    cost_mine, alternative_path_mine = agent.determine_cost_to_change(
+                        to_avoid_path=conflicting_agent.path_planner.convert_route_to_path(conflicting_agent)
+                    )
+                    agent.route = []
+                    
+                    print("\t my cost:", cost_mine," others cost", cost_other," so I win?", cost_mine > cost_other)
+                    
+                    # who is worse off?
+                    if cost_mine > cost_other:
+                        agreement_to_solve_conflict = True
+                    elif cost_mine < cost_other:
+                        agreement_to_solve_conflict = False
+                    else:  # cost_mine == cost_other
+                        agreement_to_solve_conflict = np.random.choice([True, False])
+                    
+                    # continue with other conflicts if won
+                    if agreement_to_solve_conflict:
+                        conflicting_agent.change_path_to_satisfy(change_to_path=alternative_path_other)
+                        continue
+                    # otherwise, break the loop
+                    else:
+                        all_conflicts_resolved = False
+                        break
+                # if others changed their plans and agreed, we can keep this
+                if all_conflicts_resolved:
+                    planning_finished = True
+                    break
+                # otherwise, didnt work out, so we have to add them into our agents_considered constraints
+                for conflict in conflicts:
+                    conflicting_agent = self.get_agent(conflict["conflicting_agent"])
+                    agents_considered.append(conflicting_agent)
+                    agents_considered = list(set(agents_considered))
+                    if not conflicting_agent in agents_had_conflict_with:
+                        agents_had_conflict_with.append(conflicting_agent)
+                    else: # repeating conflicts, avoid inifinite loop
+                        current_path = None
+                        planning_finished = True
+                        break
+            # if successful, assign it
+            if current_path is not None:
+                current_route = agent.path_planner.convert_path_to_route(current_path)
+                agent.route = current_route
+                print("successfully done")
+            else:
+                # otherwise use planning respectfully (conflict-avoiding)
+                agent.plan_route_decentralized_respectful()
+                print("negotiations failed")
+             
+                
+             
+                
 ###############################################################################
 ###### MAIN ###################################################################
 ###############################################################################
