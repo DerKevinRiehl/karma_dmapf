@@ -5,80 +5,86 @@ import itertools
 import numpy as np
 from planner_path_astar import AStarPathPlanner
 
+
 class CBS_Constraint:
     def __init__(self, agent, x, y, t):
         self.agent = agent
         self.x = x
         self.y = y
         self.t = t
-    
+
     def __lt__(self, other):
         return self.t < other.t
+
 
 class CBS_Node:
     def __init__(self):
         self.constraints = []
         self.paths = []
         self.cost = 0
-    
+
     def __lt__(self, other):
         return self.cost < other.cost
-        
+
+
 class Planner_CBS:
     """
     This is the implementation of conflict based search (CBS).
     This algorithm plans paths using A* algorithm for multiple agents simultaneously
     that cannot cross each other, and need to consider each other when planning and
     executing their trajectory.
-    
+
     Every branch (CBS_Node) of the search tree represents a set of different paths for all agents.
     The goal is find a set of paths (plan) that minimizes collective travel time.
     """
+
     def __init__(self, grid, cbs_params, astar_params):
         self.grid = grid
         self.cbs_params = cbs_params
         self.astar_planner = AStarPathPlanner(grid, astar_params=astar_params)
-    
+
     def detect_conflict(self, paths):
         max_len = max(len(p) for p in paths)
         for t in range(max_len):
             positions = {}
-            for i,path in enumerate(paths):
+            for i, path in enumerate(paths):
                 if t < len(path):
                     s = path[t]
-                elif t < len(path)+self.cbs_params["MAX_IDLE_TIME_CONSIDERED"]:
+                elif t < len(path) + self.cbs_params["MAX_IDLE_TIME_CONSIDERED"]:
                     s = path[-1]
                 else:
-                    continue # <- makes idle agent disappear
+                    continue  # <- makes idle agent disappear
                     # s = path[-1]
-                pos = (s.x,s.y)
+                pos = (s.x, s.y)
                 if pos in positions:
-                    return {
-                        "time":t,
-                        "a1":positions[pos],
-                        "a2":i,
-                        "pos":pos
-                    }
+                    return {"time": t, "a1": positions[pos], "a2": i, "pos": pos}
                 positions[pos] = i
         return None
-    
+
     def compute_cost(self, paths):
         return sum(len(p) for p in paths)
 
     def get_dynamic_occupancy_grid(self, constraints, agent):
-        dynamic_occupancy = np.zeros((self.astar_planner.astar_params["planning_horizon"] + 1, self.grid.shape[0], self.grid.shape[1]), dtype=bool)
+        dynamic_occupancy = np.zeros(
+            (
+                self.astar_planner.astar_params["planning_horizon"] + 1,
+                self.grid.shape[0],
+                self.grid.shape[1],
+            ),
+            dtype=bool,
+        )
         for c in constraints:
             if c.agent == agent:
                 dynamic_occupancy[c.t, c.x, c.y] = True
         return dynamic_occupancy
-    
+
     def astar_launcher(self, start, goal, agent, constraints):
         # Build occupancy grid from constraints
         dynamic_occupancy = self.get_dynamic_occupancy_grid(constraints, agent)
-        return self.astar_planner.astar(start=start, 
-                                        goal=goal, 
-                                        dynamic_occupancy=dynamic_occupancy)
-        
+        return self.astar_planner.astar(
+            start=start, goal=goal, dynamic_occupancy=dynamic_occupancy
+        )
+
     def plan_cbs(self, starts, goals):
         root = CBS_Node()
         # initial paths
@@ -115,20 +121,24 @@ class Planner_CBS:
                 child.paths = list(node.paths)
                 start_state = child.paths[agent][0]  # PathPlannerState
                 start = (start_state.x, start_state.y, start_state.theta)
-                new_path = self.astar_launcher(start, goals[agent], agent, child.constraints)
+                new_path = self.astar_launcher(
+                    start, goals[agent], agent, child.constraints
+                )
                 if new_path is None:
                     continue
                 child.paths[agent] = new_path
                 child.cost = self.compute_cost(child.paths)
                 heapq.heappush(open_list, (child.cost, next(counter), child))
-        print("\t\tCBS [No conflict-free set of paths could be found in given time horizon]")
+        print(
+            "\t\tCBS [No conflict-free set of paths could be found in given time horizon]"
+        )
         return None
 
     def convert_paths_to_routes(self, paths):
         routes = []
         if paths is None:
             return None
-        for i,p in enumerate(paths):
+        for i, p in enumerate(paths):
             route = [s.action for s in p][1:]
             routes.append(route)
         return routes

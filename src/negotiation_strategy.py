@@ -1,9 +1,10 @@
 import numpy as np
 
+
 class NegotiationStrategy:
-    
+
     def negotiate_egoistic(cost_other, cost_mine):
-        agreement_to_solve_conflict = (cost_other<=0)
+        agreement_to_solve_conflict = cost_other <= 0
         return agreement_to_solve_conflict
 
     def negotiate_altruistic(cost_other, cost_mine):
@@ -15,4 +16,3 @@ class NegotiationStrategy:
         else:  # cost_mine == cost_other
             agreement_to_solve_conflict = np.random.choice([True, False])
         return agreement_to_solve_conflict
-       

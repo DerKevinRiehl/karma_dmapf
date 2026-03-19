@@ -1,9 +1,20 @@
 import numpy as np
 from planner_path_astar import AStarPathPlanner
-from constants import AGENT_ORIENTATIONS, AGENT_STATUS_CARRY, AGENT_STATUS_PICKUP, AGENT_STATUS_IDLE
-from constants import AGENT_ORIENTATION_SOUTH, AGENT_ORIENTATION_NORTH, AGENT_ORIENTATION_EAST, AGENT_ORIENTATION_WEST
+from constants import (
+    AGENT_ORIENTATIONS,
+    AGENT_STATUS_CARRY,
+    AGENT_STATUS_PICKUP,
+    AGENT_STATUS_IDLE,
+)
+from constants import (
+    AGENT_ORIENTATION_SOUTH,
+    AGENT_ORIENTATION_NORTH,
+    AGENT_ORIENTATION_EAST,
+    AGENT_ORIENTATION_WEST,
+)
 from constants import IDLING_NEIGHBORHOOD_SEARCH_RANGE
 from geometry import GridTools
+
 
 class Agent:
     def __init__(self, agent_id, environment):
@@ -18,111 +29,135 @@ class Agent:
         self.target_position = []
         self.grid.occupy(self.current_position)
         self.init_karma_specific_properties()
-            
+
     def init_karma_specific_properties(self):
         self.karma_balance = self.environment.settings["params_karma"]["initial_karma"]
-        self.path_planner = AStarPathPlanner(static_occupancy_grid=self.environment.static_grid.occupancy_grid, astar_params=self.environment.settings["params_astar"])
-        
+        self.path_planner = AStarPathPlanner(
+            static_occupancy_grid=self.environment.static_grid.occupancy_grid,
+            astar_params=self.environment.settings["params_astar"],
+        )
+
     def is_idle(self):
         return self.assigned_task is None
-    
+
     def is_available_soon(self):
-        return self.status==AGENT_STATUS_CARRY
-    
+        return self.status == AGENT_STATUS_CARRY
+
     def release_task(self):
         self.assigned_task = None
         self.status = AGENT_STATUS_IDLE
         self.target_position = []
         self.route = []
-        
+
     def assign_task(self, task):
         self.assigned_task = task
         self.target_position = task.from_position
-        if self.current_position==self.target_position:
+        if self.current_position == self.target_position:
             self.status = AGENT_STATUS_CARRY
         else:
             self.status = AGENT_STATUS_PICKUP
 
     def update_target_position(self):
         # determine target
-        if self.status==AGENT_STATUS_PICKUP:
+        if self.status == AGENT_STATUS_PICKUP:
             self.target_position = self.assigned_task.from_position
-        elif self.status==AGENT_STATUS_CARRY:
+        elif self.status == AGENT_STATUS_CARRY:
             self.target_position = self.assigned_task.to_position
         # update status in case hit
-        if self.current_position==self.target_position:
+        if self.current_position == self.target_position:
             self.status = AGENT_STATUS_CARRY
             self.target_position = self.assigned_task.to_position
-                
+
     def execute_route(self):
-        if len(self.route)>0:
+        if len(self.route) > 0:
             task = self.route[0]
             self.route = self.route[1:]
-            if task=="N":
+            if task == "N":
                 self._move_north()
-            if task=="E":
+            if task == "E":
                 self._move_east()
-            if task=="S":
+            if task == "S":
                 self._move_south()
-            if task=="W":
+            if task == "W":
                 self._move_west()
-            if task=="C":
+            if task == "C":
                 self._rotate_clockwise()
-            if task=="A":
+            if task == "A":
                 self._rotate_counter_clockwise()
-            if task=="T":
+            if task == "T":
                 pass
-        
+
             if self.status == AGENT_STATUS_CARRY:
                 self.assigned_task.current_position = self.current_position
 
     def _move_north(self):
-        if self.current_position[1] < self.grid.grid_size-1 and self.current_orientation==AGENT_ORIENTATION_NORTH:
+        if (
+            self.current_position[1] < self.grid.grid_size - 1
+            and self.current_orientation == AGENT_ORIENTATION_NORTH
+        ):
             self.grid.release(self.current_position)
             self.current_position[1] += 1
             self.grid.occupy(self.current_position)
 
     def _move_east(self):
-        if self.current_position[0] < self.grid.grid_size-1 and self.current_orientation==AGENT_ORIENTATION_EAST:
+        if (
+            self.current_position[0] < self.grid.grid_size - 1
+            and self.current_orientation == AGENT_ORIENTATION_EAST
+        ):
             self.grid.release(self.current_position)
             self.current_position[0] += 1
-            self.grid.occupy(self.current_position)     
+            self.grid.occupy(self.current_position)
 
     def _move_south(self):
-        if self.current_position[1] > 0 and self.current_orientation==AGENT_ORIENTATION_SOUTH:
+        if (
+            self.current_position[1] > 0
+            and self.current_orientation == AGENT_ORIENTATION_SOUTH
+        ):
             self.grid.release(self.current_position)
             self.current_position[1] -= 1
-            self.grid.occupy(self.current_position)     
+            self.grid.occupy(self.current_position)
 
-    def _move_west(self): 
-        if self.current_position[0] > 0 and self.current_orientation==AGENT_ORIENTATION_WEST:
+    def _move_west(self):
+        if (
+            self.current_position[0] > 0
+            and self.current_orientation == AGENT_ORIENTATION_WEST
+        ):
             self.grid.release(self.current_position)
             self.current_position[0] -= 1
-            self.grid.occupy(self.current_position)     
+            self.grid.occupy(self.current_position)
 
     def _rotate_clockwise(self):
         self.current_orientation += 1
-        if self.current_orientation>AGENT_ORIENTATION_WEST:
+        if self.current_orientation > AGENT_ORIENTATION_WEST:
             self.current_orientation = AGENT_ORIENTATION_NORTH
 
     def _rotate_counter_clockwise(self):
         self.current_orientation -= 1
-        if self.current_orientation<AGENT_ORIENTATION_NORTH:
+        if self.current_orientation < AGENT_ORIENTATION_NORTH:
             self.current_orientation = AGENT_ORIENTATION_WEST
 
     def _determine_intersection_free_path(self, dynamic_occupancy_grid):
         path = self.path_planner.astar(
-            start=(self.current_position[0], self.current_position[1], self.current_orientation), 
-            goal=(self.target_position[0], self.target_position[1]), 
-            dynamic_occupancy=dynamic_occupancy_grid)
-        return path 
-    
+            start=(
+                self.current_position[0],
+                self.current_position[1],
+                self.current_orientation,
+            ),
+            goal=(self.target_position[0], self.target_position[1]),
+            dynamic_occupancy=dynamic_occupancy_grid,
+        )
+        return path
+
     def _determine_idle_parking_path(self, dynamic_occupancy_grid):
         x0, y0 = self.current_position
         # determine empty cells for idling nearby
         target_candidates = []
-        for dx in range(-IDLING_NEIGHBORHOOD_SEARCH_RANGE, IDLING_NEIGHBORHOOD_SEARCH_RANGE+1):
-            for dy in range(-IDLING_NEIGHBORHOOD_SEARCH_RANGE, IDLING_NEIGHBORHOOD_SEARCH_RANGE+1):
+        for dx in range(
+            -IDLING_NEIGHBORHOOD_SEARCH_RANGE, IDLING_NEIGHBORHOOD_SEARCH_RANGE + 1
+        ):
+            for dy in range(
+                -IDLING_NEIGHBORHOOD_SEARCH_RANGE, IDLING_NEIGHBORHOOD_SEARCH_RANGE + 1
+            ):
                 # skip the current cell itself
                 if dx == 0 and dy == 0:
                     continue
@@ -132,7 +167,10 @@ class Agent:
                 # grid bounds check
                 if probe_pos_x < 0 or probe_pos_y < 0:
                     continue
-                if probe_pos_x >= dynamic_occupancy_grid.shape[1] or probe_pos_y >= dynamic_occupancy_grid.shape[2]:
+                if (
+                    probe_pos_x >= dynamic_occupancy_grid.shape[1]
+                    or probe_pos_y >= dynamic_occupancy_grid.shape[2]
+                ):
                     continue
                 # cell must be free at all times in the horizon
                 # dynamic_occupancy_grid[:, x, y] is a 1D boolean array over time
@@ -145,20 +183,25 @@ class Agent:
         # if some found, check if there is a path to one
         for target_candidate in target_candidates:
             path = self.path_planner.astar(
-                start=(self.current_position[0], self.current_position[1], self.current_orientation), 
-                goal=(target_candidate[0], target_candidate[1]), 
-                dynamic_occupancy=dynamic_occupancy_grid)
+                start=(
+                    self.current_position[0],
+                    self.current_position[1],
+                    self.current_orientation,
+                ),
+                goal=(target_candidate[0], target_candidate[1]),
+                dynamic_occupancy=dynamic_occupancy_grid,
+            )
             if not path is None:
                 return path
         return None
-    
+
     def plan_route_decentralized_respectful(self):
         # determine dynamic_occupancy_grid given all already planned routes
         dynamic_occupancy_grid = GridTools.create_dynamic_occupancy_grid(
             environment=self.environment,
-            time_horizon=self.environment.settings["params_astar"]["planning_horizon"], 
-            agent_list=self.environment.agents, 
-            tabu_agent=self
+            time_horizon=self.environment.settings["params_astar"]["planning_horizon"],
+            agent_list=self.environment.agents,
+            tabu_agent=self,
         )
         # determine possible, intersection free path
         path = self._determine_intersection_free_path(dynamic_occupancy_grid)
@@ -166,35 +209,36 @@ class Agent:
             route = self.path_planner.convert_path_to_route(path)
             # print("\trouteadded for ", agent.id, route)
             self.route = route
-        
+
     def determine_cost_to_change(self, to_avoid_path):
         current_cost = len(self.route)
         # determine dynamic_occupancy_grid given all already planned routes
         dynamic_occupancy_grid = GridTools.create_dynamic_occupancy_grid(
             environment=self.environment,
-            time_horizon=self.environment.settings["params_astar"]["planning_horizon"], 
-            agent_list=self.environment.agents, 
-            tabu_agent=self
+            time_horizon=self.environment.settings["params_astar"]["planning_horizon"],
+            agent_list=self.environment.agents,
+            tabu_agent=self,
         )
         # add to_avoid_path to dynamic_occupancy grid
         for state in to_avoid_path:
             dynamic_occupancy_grid[state.t][state.x][state.y] = True
-            
+
         # if you have a target
-        if len(self.target_position)>0:  
+        if len(self.target_position) > 0:
             # determine possible, intersection free path
-            changed_path = self._determine_intersection_free_path(dynamic_occupancy_grid)
+            changed_path = self._determine_intersection_free_path(
+                dynamic_occupancy_grid
+            )
             if changed_path is not None:
                 changed_route = self.path_planner.convert_path_to_route(changed_path)
                 changed_cost = len(changed_route)
-                return (changed_cost-current_cost), changed_path
+                return (changed_cost - current_cost), changed_path
         else:
             # determine if there is any free position nearby to idle parking
             changed_path = self._determine_idle_parking_path(dynamic_occupancy_grid)
             return -1, changed_path
         return 1000, changed_path
-        
+
     def change_path_to_satisfy(self, change_to_path):
         alternative_route = self.path_planner.convert_path_to_route(change_to_path)
         self.route = alternative_route
-        

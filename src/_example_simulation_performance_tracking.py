@@ -1,7 +1,7 @@
 """
-POTENTIAL TITLE: 
+POTENTIAL TITLE:
     KARMA MECHANISMS FOR DECENTRALIZED, ORIENTATION-AWARE MAPF
-    
+
 interesting repo: https://github.com/GavinPHR/Multi-Agent-Path-Finding?tab=readme-ov-file
 """
 
@@ -13,8 +13,12 @@ from environment import Environment
 from planner_path_astar import AStarPathPlanner
 from visualization import plot_environment_and_reservation, make_gif
 
-from constants import MAPF_CONTROLLER_CENTRALIZED, MAPF_CONTROLLER_DECENTRALIZED_RESPECT, MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC, MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC
-
+from constants import (
+    MAPF_CONTROLLER_CENTRALIZED,
+    MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+)
 
 
 ###############################################################################
@@ -30,24 +34,15 @@ simulation_settings = {
     "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     "time_horizon_visualization": 10,
     "time_simulation_duration": 1000,
-    "params_astar": {
-        "max_iterations": 5000,
-        "planning_horizon": 50
-    },
+    "params_astar": {"max_iterations": 5000, "planning_horizon": 50},
     "params_cbs": {
         "max_iterations": 5000,
         "MAX_IDLE_TIME_CONSIDERED": 5,
-        "PLANNING_HORIZON": 100
+        "PLANNING_HORIZON": 100,
     },
-    "params_karma": {
-        "initial_karma": 5    
-    },
-    "debug_statements": False
+    "params_karma": {"initial_karma": 5},
+    "debug_statements": False,
 }
-
-
-
-
 
 
 ###############################################################################
@@ -65,20 +60,27 @@ for random_seed in range(41, 51):
     print("Starting Experiment", random_seed)
     environment = Environment(settings=simulation_settings)
     # spawn initial agents
-    for n in range(0, 10):#int(N_AGENTS/2)):
+    for n in range(0, 10):  # int(N_AGENTS/2)):
         environment.spawn_agent()
     # spawn initial tasks
-    for n in range(0, 10):#int(N_AGENTS/2)):
+    for n in range(0, 10):  # int(N_AGENTS/2)):
         environment.spawn_task()
     # simulation loop
     while environment.time < environment.settings["time_simulation_duration"]:
-        print("\ttime:", environment.time, "\t| agents:", len(environment.agents), "\t| tasks:", len(environment.tasks))
+        print(
+            "\ttime:",
+            environment.time,
+            "\t| agents:",
+            len(environment.agents),
+            "\t| tasks:",
+            len(environment.tasks),
+        )
         # general update
         environment.time += 1
         # handle agents
         environment.handle_agents()
         # # spawn tasks randomly
-        if len(environment.tasks)<len(environment.agents):
+        if len(environment.tasks) < len(environment.agents):
             environment.spawn_task()
         # handle tasks
         environment.assign_open_tasks()
@@ -86,9 +88,11 @@ for random_seed in range(41, 51):
         # report A-STAR Calls
         n_astar_calls += AStarPathPlanner.COUNTER
         AStarPathPlanner.COUNTER = 0
-        
+
     # evaluation
-    task_completion_times = [task.completed_time - task.spawned_time for task in environment.completed_tasks]
+    task_completion_times = [
+        task.completed_time - task.spawned_time for task in environment.completed_tasks
+    ]
     n_completed_tasks = len(task_completion_times)
     n_total_cost = np.sum(task_completion_times)
     n_average_cost = np.mean(task_completion_times)
@@ -99,11 +103,12 @@ for random_seed in range(41, 51):
     n_total_cost_list.append(n_total_cost)
     n_average_cost_list.append(n_average_cost)
     n_distribution_list.append(n_distribution)
-    
-    
+
+
 def summarize(x):
     x = np.array(x, dtype=float)
     return x.mean(), x.std(ddof=0)  # population std; use ddof=1 for sample std
+
 
 avg_astar, std_astar = summarize(astar_calls_list)
 avg_completed, std_completed = summarize(n_completed_tasks_list)
@@ -112,13 +117,33 @@ avg_avg_cost, std_avg_cost = summarize(n_average_cost_list)
 avg_distribution, std_distribution = summarize(n_distribution_list)
 
 print("=====================================================")
-print("Experiment Results for algorithm", environment.settings["mapf_control"], "over", len(astar_calls_list), "experiments")
+print(
+    "Experiment Results for algorithm",
+    environment.settings["mapf_control"],
+    "over",
+    len(astar_calls_list),
+    "experiments",
+)
 print("=====================================================")
 print("A* calls:        mean = {:.3f} \t std = {:.3f}".format(avg_astar, std_astar))
-print("Completed tasks: mean = {:.3f} \t std = {:.3f}".format(avg_completed, std_completed))
-print("Total cost:      mean = {:.3f} \t std = {:.3f}".format(avg_total_cost, std_total_cost))
-print("Avg cost:        mean = {:.3f} \t std = {:.3f}".format(avg_avg_cost, std_avg_cost))
-print("Distribution:    mean = {:.3f} \t std = {:.3f}".format(avg_distribution, std_distribution))
+print(
+    "Completed tasks: mean = {:.3f} \t std = {:.3f}".format(
+        avg_completed, std_completed
+    )
+)
+print(
+    "Total cost:      mean = {:.3f} \t std = {:.3f}".format(
+        avg_total_cost, std_total_cost
+    )
+)
+print(
+    "Avg cost:        mean = {:.3f} \t std = {:.3f}".format(avg_avg_cost, std_avg_cost)
+)
+print(
+    "Distribution:    mean = {:.3f} \t std = {:.3f}".format(
+        avg_distribution, std_distribution
+    )
+)
 print("=====================================================")
 
 """
