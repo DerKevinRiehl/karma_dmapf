@@ -28,14 +28,11 @@ class Agent:
         self.route = []
         self.target_position = []
         self.grid.occupy(self.current_position)
-        self.init_karma_specific_properties()
-
-    def init_karma_specific_properties(self):
-        self.karma_balance = self.environment.settings["params_karma"]["initial_karma"]
         self.path_planner = AStarPathPlanner(
             static_occupancy_grid=self.environment.static_grid.occupancy_grid,
             astar_params=self.environment.settings["params_astar"],
         )
+        self.karma_balance = 0
 
     def is_idle(self):
         return self.assigned_task is None

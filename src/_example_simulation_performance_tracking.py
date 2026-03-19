@@ -18,6 +18,7 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
 )
 
 
@@ -29,9 +30,10 @@ simulation_settings = {
     "grid_size": 14,
     "n_agents": 10,
     # "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
-    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
-    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
-    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
+    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
     "time_horizon_visualization": 10,
     "time_simulation_duration": 1000,
     "params_astar": {"max_iterations": 5000, "planning_horizon": 50},
@@ -175,5 +177,15 @@ Completed tasks: mean = 484.400 	 std = 4.543
 Total cost:      mean = 9248.600 	 std = 29.971
 Avg cost:        mean = 19.095 	 std = 0.222
 Distribution:    mean = 5.649 	 std = 0.209
+=====================================================
+
+=====================================================
+Experiment Results for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
+=====================================================
+A* calls:        mean = 136949.600 	 std = 11524.341
+Completed tasks: mean = 485.900 	 std = 5.430
+Total cost:      mean = 9253.500 	 std = 24.258
+Avg cost:        mean = 19.047 	 std = 0.226
+Distribution:    mean = 5.584 	 std = 0.231
 =====================================================
 """

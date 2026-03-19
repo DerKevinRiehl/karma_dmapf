@@ -4,7 +4,7 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
-    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KAMRA,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
 )
 from planner_mapf_central_CBS import Planner_CBS
 from planner_assignment_central import Planner_Assignment_Central
@@ -100,6 +100,13 @@ class Environment:
             self.handle_agents_route_planning_decentralized_negotiate(
                 NegotiationStrategy.negotiate_altruistic
             )
+        elif (
+            self.settings["mapf_control"]
+            == MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA
+        ):
+            self.handle_agents_route_planning_decentralized_negotiate(
+                NegotiationStrategy.negotiate_karma, use_agent_params=True
+            )
 
     def handle_agents_route_execution(self):
         for agent in self.agents:
@@ -188,7 +195,7 @@ class Environment:
             agent.plan_route_decentralized_respectful()
 
     def handle_agents_route_planning_decentralized_negotiate(
-        self, negotiation_function
+        self, negotiation_function, use_agent_params=False
     ):
         """
         This works as follows: every new agent will plan its route shortest.
@@ -300,9 +307,15 @@ class Environment:
                     )
                     agent.route = []
                     # determine decision - negotiation outcome - egoistic
-                    agreement_to_solve_conflict = negotiation_function(
-                        cost_other, cost_mine
-                    )
+                    if use_agent_params:
+                        agreement_to_solve_conflict = negotiation_function(
+                            cost_other, cost_mine, conflicting_agent, agent
+                        )
+                    else:
+                        agreement_to_solve_conflict = negotiation_function(
+                            cost_other, cost_mine
+                        )
+
                     # if agrees, continue
                     if agreement_to_solve_conflict:
                         conflicting_agent.change_path_to_satisfy(
