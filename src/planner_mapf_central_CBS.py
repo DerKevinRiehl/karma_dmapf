@@ -3,7 +3,7 @@
 import heapq
 import itertools
 import numpy as np
-from planner_path_tools import AStarPathPlanner
+from planner_path_astar import AStarPathPlanner
 
 class CBS_Constraint:
     def __init__(self, agent, x, y, t):
@@ -66,7 +66,7 @@ class Planner_CBS:
         return sum(len(p) for p in paths)
 
     def get_dynamic_occupancy_grid(self, constraints, agent):
-        dynamic_occupancy = np.zeros((self.astar_planner.astar_params["MAX_TIME_HORIZON"] + 1, self.grid.shape[0], self.grid.shape[1]), dtype=bool)
+        dynamic_occupancy = np.zeros((self.astar_planner.astar_params["planning_horizon"] + 1, self.grid.shape[0], self.grid.shape[1]), dtype=bool)
         for c in constraints:
             if c.agent == agent:
                 dynamic_occupancy[c.t, c.x, c.y] = True
@@ -97,7 +97,7 @@ class Planner_CBS:
             _, _, node = heapq.heappop(open_list)
             nodes_expanded += 1
             # ABORT CONDITION: TIMEOUT
-            if nodes_expanded > self.cbs_params["MAX_CBS_NODES"]:
+            if nodes_expanded > self.cbs_params["max_iterations"]:
                 print("\t\t CBS [TIMEOUT]")
                 return None
             # Detect conflicts

@@ -47,7 +47,7 @@ class AStarPathPlanner:
             AStarPathPlanner.COUNTER += 1
             steps += 1
             # ABORT CONDITION: TIMEOUT
-            if steps > self.astar_params["MAX_STEPS"]:
+            if steps > self.astar_params["max_iterations"]:
                 print("\t\tASTAR [TIMEOUT] A* aborted")
                 return None
             # EXPLORE NEW STEP
@@ -62,7 +62,7 @@ class AStarPathPlanner:
                 return new_path
             # EXPLORE
             next_t = state.t + 1
-            if next_t > self.astar_params["MAX_TIME_HORIZON"]:
+            if next_t > self.astar_params["planning_horizon"]:
                 continue
             # BRANCH 1: ACTION: WAIT
             if dynamic_occupancy is None or not dynamic_occupancy[next_t, state.x, state.y]:

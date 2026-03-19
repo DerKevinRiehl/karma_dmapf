@@ -7,8 +7,7 @@ from constants import SQUARE_SYMBOL_OCCUPIED, AGENT_STATUS_CARRY, AGENT_STATUS_P
 from constants import AGENT_ORIENTATION_SOUTH, AGENT_ORIENTATION_NORTH, AGENT_ORIENTATION_EAST
 import imageio.v2 as imageio
 import glob
-import os
-
+from geometry import GridTools
 
 def plot_grid(environment, save_filename=None):
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -169,7 +168,7 @@ def draw_reservation_table(reservation_table, save_filename=None):
     else:
         plt.show()
     
-def plot_environment_and_reservation(environment, time_horizon, save_filename=None):
+def plot_environment_and_reservation(environment, save_filename=None):
     """
     Plots side by side:
     - Left: 2D grid with agents and tasks
@@ -244,7 +243,7 @@ def plot_environment_and_reservation(environment, time_horizon, save_filename=No
 
     # -------------------- RIGHT: 3D reservation table --------------------
     ax2 = fig.add_subplot(1, 2, 2, projection='3d')
-    rt = environment.create_3D_reservation_grid(time_horizon)
+    rt = GridTools.create_3D_reservation_grid(environment, environment.settings["time_horizon_visualization"])
     t_idx, x_idx, y_idx = np.where(rt > 0)
     agent_ids = rt[t_idx, x_idx, y_idx]
     unique_agents = np.unique(agent_ids)
