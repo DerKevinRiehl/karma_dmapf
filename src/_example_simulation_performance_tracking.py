@@ -121,7 +121,7 @@ avg_distribution, std_distribution = summarize(n_distribution_list)
 print("=====================================================")
 print(
     "Experiment Results for algorithm",
-    environment.settings["mapf_control"],
+    simulation_settings["mapf_control"],
     "over",
     len(astar_calls_list),
     "experiments",

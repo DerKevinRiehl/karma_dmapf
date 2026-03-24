@@ -8,6 +8,7 @@ interesting repo: https://github.com/GavinPHR/Multi-Agent-Path-Finding?tab=readm
 ###############################################################################
 ###### IMPORTS ################################################################
 ###############################################################################
+import os
 import numpy as np
 from environment import Environment
 from planner_path_astar import AStarPathPlanner
@@ -52,6 +53,7 @@ environment = Environment(settings=simulation_settings)
 # spawn initial agents
 for n in range(0, 10):  # int(N_AGENTS/2)):
     environment.spawn_agent()
+
 # simulation loop
 SIMULATION_TIME_STEPS_STOP_SPAWNING = 70
 while environment.time < environment.settings["time_simulation_duration"]:
@@ -63,10 +65,13 @@ while environment.time < environment.settings["time_simulation_duration"]:
         "\t| tasks:",
         len(environment.tasks),
     )
+
     # general update
     environment.time += 1
+
     # handle agents
     environment.handle_agents()
+
     # # spawn tasks randomly
     if environment.time < SIMULATION_TIME_STEPS_STOP_SPAWNING:
         if len(environment.tasks) < len(environment.agents):
@@ -75,19 +80,24 @@ while environment.time < environment.settings["time_simulation_duration"]:
             if np.random.random() > 0.9:
                 if len(environment.tasks) * 2 + len(environment.agents) < 100 - 30:
                     environment.spawn_task()
+
     # handle tasks
     environment.assign_open_tasks()
     closed = environment.close_finished_tasks()
+
     # visualize
+    os.makedirs("figs", exist_ok=True)
     plot_environment_and_reservation(
         environment, save_filename=f"figs/x_image_{environment.time:04d}.png"
     )
+
     # report A-STAR Calls
     print("\tA-Star Calls:", AStarPathPlanner.COUNTER)
     AStarPathPlanner.COUNTER = 0
 
+os.makedirs("results", exist_ok=True)
 make_gif(
     input_pattern="figs/x_image_*.png",
-    output_gif=f"animation_{environment.settings['mapf_control']}.gif",
+    output_gif=f"results/animation_{environment.settings['mapf_control']}.gif",
     duration=0.2,
 )
