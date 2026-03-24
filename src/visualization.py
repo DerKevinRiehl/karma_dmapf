@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.lines import Line2D
 from matplotlib import cm
+from typing import List, Any
+
 from constants import (
     SQUARE_SYMBOL_OCCUPIED,
     AGENT_STATUS_CARRY,
@@ -411,9 +413,11 @@ def plot_environment_and_reservation(environment, save_filename=None):
 
 
 def make_gif(
-    input_pattern="figs/x_image_*.png", output_gif="figs/animation.gif", duration=0.2
-):
+    input_pattern: str = "figs/x_image_*.png",
+    output_gif: str = "figs/animation.gif",
+    duration: float = 0.2,
+) -> None:
     # Collect and sort frames
-    frames = sorted(glob.glob(input_pattern))
-    images = [imageio.imread(f) for f in frames]
+    frames: List[str] = sorted(glob.glob(input_pattern))
+    images: List[Any] = [imageio.imread(f) for f in frames]
     imageio.mimsave(output_gif, images, duration=duration)

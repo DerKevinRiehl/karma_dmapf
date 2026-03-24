@@ -1,3 +1,11 @@
+from __future__ import annotations
+from typing import List, Tuple, TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from agent import Agent
+    from task import Task
+    from numpy.typing import NDArray
+
 import numpy as np
 from geometry import Geometry
 from scipy.optimize import linear_sum_assignment
@@ -6,7 +14,9 @@ from constants import AGENT_STATUS_CARRY
 
 class Planner_Assignment_Central:
     @staticmethod
-    def estimate_agent_availability(agent, current_time):
+    def estimate_agent_availability(
+        agent: "Agent", current_time: int
+    ) -> Tuple[List[int], int, int]:
         """
         Returns:
             (available_position, available_time, orientation)
@@ -14,21 +24,40 @@ class Planner_Assignment_Central:
         # Case 1: idle agent
         if agent.is_idle():
             return agent.current_position, current_time, agent.current_orientation
+
         # Case 2: busy agent → assume it will finish current task (CARRYING STATUS)
-        if agent.status == AGENT_STATUS_CARRY:
-            remaining_steps = len(agent.route)
+        elif agent.status == AGENT_STATUS_CARRY:
+            remaining_steps: int = len(agent.route)
+
             # fallback: if no route exists yet, assume 0
             if remaining_steps is None:
                 return agent.current_position, current_time, agent.current_orientation
-            available_time = current_time + remaining_steps
+
+            available_time: int = current_time + remaining_steps
+
+            # if agent is in carry state, it should have an assigned task
+            if agent.assigned_task is None:
+                raise ValueError(
+                    f"Agent {agent.id} is in CARRY status but has no assigned task."
+                )
+
             # after finishing, agent will be at delivery location
-            available_position = agent.assigned_task.to_position
+            available_position: List[int] = agent.assigned_task.to_position
             # orientation approximation (keep current)
-            orientation = agent.current_orientation
+            orientation: int = agent.current_orientation
             return available_position, available_time, orientation
 
+        raise ValueError(
+            f"Agent {agent.id} has unsupported status {agent.status} for availability estimation."
+        )
+
     @staticmethod
-    def plan_assignment(candidate_agents, open_tasks, time, alpha=0.2):
+    def plan_assignment(
+        candidate_agents: List["Agent"],
+        open_tasks: List["Task"],
+        time: int,
+        alpha: float = 0.2,
+    ) -> Tuple[NDArray[np.int_], NDArray[np.int_]]:
         """
         Compute optimal agent-task assignment using Hungarian algorithm.
         The assignment costs include travel time (manhattan distance + rotation)
@@ -41,11 +70,12 @@ class Planner_Assignment_Central:
         time: current time
         alpha: weight for task's wait time in cost function
         """
-        num_agents = len(candidate_agents)
-        num_tasks = len(open_tasks)
+        num_agents: int = len(candidate_agents)
+        num_tasks: int = len(open_tasks)
         if num_agents == 0 or num_tasks == 0:
-            return [], []
-        cost_matrix = np.zeros((num_agents, num_tasks))
+            return np.array([]), np.array([])
+
+        cost_matrix: NDArray[np.float64] = np.zeros((num_agents, num_tasks))
         for i, agent in enumerate(candidate_agents):
             start_pos, start_time, orientation = (
                 Planner_Assignment_Central.estimate_agent_availability(agent, time)
@@ -53,10 +83,12 @@ class Planner_Assignment_Central:
             for j, task in enumerate(open_tasks):
                 # travel from availability position to pickup
                 travel_time = Geometry.travel_time_with_rotation(
-                    start_pos, task.from_position, orientation
+                    (start_pos[0], start_pos[1]),
+                    (task.from_position[0], task.from_position[1]),
+                    orientation,
                 )
-                arrival_time = start_time + travel_time
-                wait_time = arrival_time - task.spawned_time
+                arrival_time: int = start_time + travel_time
+                wait_time: int = arrival_time - task.spawned_time
                 cost_matrix[i, j] = arrival_time - alpha * wait_time
         # Hungarian algorithm
         agent_indices, task_indices = linear_sum_assignment(cost_matrix)

@@ -1,35 +1,50 @@
 """A STAR BASED PATH PLANNER"""
 
+from __future__ import annotations
+from typing import List, Optional, Tuple, Set, Dict, Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy.typing import NDArray
+    from agent import Agent
+
 import heapq
 from constants import DIRS, DIR_NAMES
 
 
 class PathPlannerState:
-    def __init__(self, x, y, theta, t, action):
-        self.x = x
-        self.y = y
-        self.theta = theta
-        self.t = t
-        self.action = action
+    def __init__(self, x: int, y: int, theta: int, t: int, action: Optional[str]):
+        self.x: int = x
+        self.y: int = y
+        self.theta: int = theta
+        self.t: int = t
+        self.action: Optional[str] = action
 
-    def __lt__(self, other):
+    def __lt__(self, other: "PathPlannerState") -> bool:
         return self.t < other.t
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"PathPlannerState(x={self.x}, y={self.y}, theta={self.theta}, t={self.t}, action={self.action})"
 
 
 class AStarPathPlanner:
-    COUNTER = 0
+    COUNTER: int = 0
 
-    def __init__(self, static_occupancy_grid, astar_params):
-        self.static_occupancy_grid = static_occupancy_grid
-        self.astar_params = astar_params
+    def __init__(
+        self, static_occupancy_grid: NDArray[np.int_], astar_params: Dict[str, Any]
+    ):
+        self.static_occupancy_grid: NDArray[np.int_] = static_occupancy_grid
+        self.astar_params: Dict[str, Any] = astar_params
 
-    def manhattan(self, a, b):
+    def manhattan(self, a: Tuple[int, int], b: Tuple[int, int]) -> int:
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-    def astar(self, start, goal, dynamic_occupancy=None):
+    def astar(
+        self,
+        start: Tuple[int, int, int],
+        goal: Tuple[int, int],
+        dynamic_occupancy: Optional[NDArray[np.bool_]] = None,
+    ) -> Optional[List[PathPlannerState]]:
         """
         This is the implementation of a astar algorithm for a robot that needs
         to rotate into the direction of travel, and can wait.
@@ -40,10 +55,12 @@ class AStarPathPlanner:
         dynamic_occupancy: 3D occupancy grid [time, x, y]
         max_time_horizon: optional maximum time to consider
         """
-        open_list = []
-        visited = set()
-        steps = 0
-        start_state = PathPlannerState(start[0], start[1], start[2], 0, "start")
+        open_list: List[Tuple[int, PathPlannerState, List[PathPlannerState]]] = []
+        visited: Set[Tuple[int, int, int, int]] = set()
+        steps: int = 0
+        start_state: PathPlannerState = PathPlannerState(
+            start[0], start[1], start[2], 0, "start"
+        )
         heapq.heappush(open_list, (0, start_state, []))
         while open_list:
             AStarPathPlanner.COUNTER += 1
@@ -54,18 +71,21 @@ class AStarPathPlanner:
                 return None
             # EXPLORE NEW STEP
             f, state, path = heapq.heappop(open_list)
-            key = (state.x, state.y, state.theta, state.t)
+            key: Tuple[int, int, int, int] = (state.x, state.y, state.theta, state.t)
             if key in visited:
                 continue
             visited.add(key)
-            new_path = path + [state]
+            new_path: List[PathPlannerState] = path + [state]
+
             # ABORT CONDITION: FOUND GOAL
             if (state.x, state.y) == goal:
                 return new_path
+
             # EXPLORE
-            next_t = state.t + 1
+            next_t: int = state.t + 1
             if next_t > self.astar_params["planning_horizon"]:
                 continue
+
             # BRANCH 1: ACTION: WAIT
             if (
                 dynamic_occupancy is None
@@ -79,6 +99,7 @@ class AStarPathPlanner:
                         new_path,
                     ),
                 )
+
             # BRANCH 2: ACTION: ROTATE (turn left/right)
             heapq.heappush(
                 open_list,
@@ -100,6 +121,7 @@ class AStarPathPlanner:
                     new_path,
                 ),
             )
+
             # BRANCH 3: ACTION: MOVE FORWARD
             dx, dy = DIRS[state.theta]
             nx, ny = state.x + dx, state.y + dy
@@ -125,12 +147,14 @@ class AStarPathPlanner:
         print("\t\tASTAR [No valid path found in given time horizon]")
         return None
 
-    def convert_path_to_route(self, path):
+    def convert_path_to_route(
+        self, path: Optional[List[PathPlannerState]]
+    ) -> Optional[List[str]]:
         if path is None:
             return None
-        return [s.action for s in path][1:]  # skip start state
+        return [s.action for s in path if s.action is not None][1:]  # skip start state
 
-    def convert_route_to_path(self, agent):
+    def convert_route_to_path(self, agent: "Agent") -> Optional[List[PathPlannerState]]:
         """
         Reconstruct a path (list of PathPlannerState) from a start state and action list.
 
@@ -139,11 +163,13 @@ class AStarPathPlanner:
         """
         if agent.route is None:
             return None
-        path = []
-        x = agent.current_position[0]
-        y = agent.current_position[1]
-        theta = agent.current_orientation
-        t = 0
+
+        path: List[PathPlannerState] = []
+        x: int = agent.current_position[0]
+        y: int = agent.current_position[1]
+        theta: int = agent.current_orientation
+        t: int = 0
+
         # include start state
         path.append(PathPlannerState(x, y, theta, t, "start"))
         for action in agent.route:
@@ -160,4 +186,5 @@ class AStarPathPlanner:
                 x += dx
                 y += dy
             path.append(PathPlannerState(x, y, theta, t, action))
+
         return path

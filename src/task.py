@@ -1,25 +1,42 @@
+from __future__ import annotations
+from typing import List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from agent import Agent
+    from environment import Environment
+    from geometry import Grid
+
+
 class Task:
-    def __init__(self, environment, task_id, grid, time):
-        self.id = task_id
-        self.grid = grid
+    def __init__(
+        self, environment: "Environment", task_id: int, grid: "Grid", time: int
+    ):
+        self.id: int = task_id
+        self.grid: "Grid" = grid
         # this is to make sure that no origin or destination is set to the origin or destination of any other task or current position of robot
         # this facilitate solving path planning and less often gets aborted
-        self.from_position = grid.get_random_empty_square_no_tasks(environment)
-        self.to_position = grid.get_random_empty_square_no_tasks(
+        from_pos = grid.get_random_empty_square_no_tasks(environment)
+        if from_pos is None:
+            raise Exception("No valid start position for task found")
+        self.from_position: List[int] = from_pos
+
+        to_pos = grid.get_random_empty_square_no_tasks(
             environment, pos=self.from_position
         )
-        if self.from_position is None or self.to_position is None:
-            raise Exception()
-        self.current_position = self.from_position.copy()
-        #######################################################################
-        self.assigned_agent = None
-        self.spawned_time = time
-        self.completed_time = None
+        if to_pos is None:
+            raise Exception("No valid end position for task found")
+        self.to_position: List[int] = to_pos
 
-    def is_assigned(self):
+        self.current_position: List[int] = self.from_position.copy()
+        #######################################################################
+        self.assigned_agent: Optional["Agent"] = None
+        self.spawned_time: int = time
+        self.completed_time: Optional[int] = None
+
+    def is_assigned(self) -> bool:
         return self.assigned_agent is not None
 
-    def is_finished(self):
+    def is_finished(self) -> bool:
         return (
             self.current_position == self.to_position
             and self.assigned_agent is not None

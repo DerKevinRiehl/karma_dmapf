@@ -21,7 +21,6 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
 )
 
-
 ###############################################################################
 ###### PARAMETERS #############################################################
 ###############################################################################
@@ -93,7 +92,9 @@ for random_seed in range(41, 51):
 
     # evaluation
     task_completion_times = [
-        task.completed_time - task.spawned_time for task in environment.completed_tasks
+        task.completed_time - task.spawned_time
+        for task in environment.completed_tasks
+        if task.completed_time is not None
     ]
     n_completed_tasks = len(task_completion_times)
     n_total_cost = np.sum(task_completion_times)
