@@ -17,6 +17,7 @@ class Task:
         # this facilitate solving path planning and less often gets aborted
         from_pos = grid.get_random_empty_square_no_tasks(environment)
         if from_pos is None:
+            # print(grid.occupancy_grid)
             raise Exception("No valid start position for task found")
         self.from_position: List[int] = from_pos
 
@@ -24,6 +25,7 @@ class Task:
             environment, pos=self.from_position
         )
         if to_pos is None:
+            # print(grid.occupancy_grid)
             raise Exception("No valid end position for task found")
         self.to_position: List[int] = to_pos
 

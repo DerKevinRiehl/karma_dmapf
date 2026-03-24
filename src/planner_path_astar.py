@@ -67,7 +67,7 @@ class AStarPathPlanner:
             steps += 1
             # ABORT CONDITION: TIMEOUT
             if steps > self.astar_params["max_iterations"]:
-                print("\t\tASTAR [TIMEOUT] A* aborted")
+                # print("\t\tASTAR [TIMEOUT] A* aborted")
                 return None
             # EXPLORE NEW STEP
             f, state, path = heapq.heappop(open_list)
@@ -144,7 +144,7 @@ class AStarPathPlanner:
                                 new_path,
                             ),
                         )
-        print("\t\tASTAR [No valid path found in given time horizon]")
+        # print("\t\tASTAR [No valid path found in given time horizon]")
         return None
 
     def convert_path_to_route(

@@ -146,34 +146,6 @@ class Planner_CBS:
             start=start, goal=goal, dynamic_occupancy=dynamic_occupancy
         )
 
-    def extract_conflict_free_subset(self, paths: List[List[PathPlannerState]]) -> List[List[PathPlannerState]]:
-        """Return a full-length list of paths where some agents keep their original path
-        and others are replaced by an idle single-state path (stay at start) so the
-        returned list is pairwise conflict-free.
-
-        Strategy: start with everyone idle, then try to add agents in increasing path length
-        (prefer shorter paths) — only keep an agent's full path if it doesn't introduce a
-        conflict with paths already accepted.
-        """
-        if not paths:
-            return []
-        # Start with everyone idle (single-state at their start)
-        final_paths: List[List[PathPlannerState]] = [[p[0]] for p in paths]
-        # Order agents by increasing full-path length (prefer adding short routes first)
-        agent_order = sorted(range(len(paths)), key=lambda i: len(paths[i]))
-        accepted_agents: List[int] = []
-        for ai in agent_order:
-            # try to set ai to its full path
-            backup = final_paths[ai]
-            final_paths[ai] = paths[ai]
-            if self.detect_conflict(final_paths) is None:
-                accepted_agents.append(ai)
-            else:
-                # revert to idle
-                final_paths[ai] = backup
-        print(f"\t\tCBS [TIMEOUT] returning {len(accepted_agents)}/{len(paths)} conflict-free routes for agents {accepted_agents}")
-        return final_paths
-
     def plan_cbs(
         self, starts: List[Tuple[int, int, int]], goals: List[Tuple[int, int]]
     ) -> Optional[List[List[PathPlannerState]]]:
@@ -196,10 +168,7 @@ class Planner_CBS:
             # ABORT CONDITION: TIMEOUT
             if nodes_expanded > self.cbs_params["max_iterations"]:
                 print("\t\t CBS [TIMEOUT]")
-                # instead of giving up completely, return a maximal conflict-free subset of the
-                # last node's paths (prefer shorter paths) so some agents can keep running
-                subset = self.extract_conflict_free_subset(node.paths)
-                return subset if subset else None
+                return None
             # Detect conflicts
             conflict = self.detect_conflict(node.paths)
             # Determine valid set of paths

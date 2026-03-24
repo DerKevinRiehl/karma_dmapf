@@ -16,7 +16,7 @@ from constants import (
 )
 
 import numpy as np
-from constants import SQUARE_SYMBOL_EMPTY, SQUARE_SYMBOL_OCCUPIED, SPAWN_BORDER
+from constants import SQUARE_SYMBOL_EMPTY, SQUARE_SYMBOL_OCCUPIED, SPAWN_BORDER, SPAWN_OCCUPIED_CELLS_BORDER
 
 
 class GridTools:
@@ -166,14 +166,14 @@ class Grid:
                 temp_occupancy_grid,
                 task.from_position[0],
                 task.from_position[1],
-                SPAWN_BORDER,
+                SPAWN_OCCUPIED_CELLS_BORDER,
                 SQUARE_SYMBOL_OCCUPIED,
             )
             Grid._occupy_with_border(
                 temp_occupancy_grid,
                 task.to_position[0],
                 task.to_position[1],
-                SPAWN_BORDER,
+                SPAWN_OCCUPIED_CELLS_BORDER,
                 SQUARE_SYMBOL_OCCUPIED,
             )
 
@@ -183,7 +183,7 @@ class Grid:
                 temp_occupancy_grid,
                 agent.current_position[0],
                 agent.current_position[1],
-                SPAWN_BORDER,
+                SPAWN_OCCUPIED_CELLS_BORDER,
                 SQUARE_SYMBOL_OCCUPIED,
             )
 
@@ -193,7 +193,7 @@ class Grid:
                 temp_occupancy_grid,
                 pos[0],
                 pos[1],
-                SPAWN_BORDER,
+                SPAWN_OCCUPIED_CELLS_BORDER,
                 SQUARE_SYMBOL_OCCUPIED,
             )
 

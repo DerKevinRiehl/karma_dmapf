@@ -61,10 +61,10 @@ for random_seed in range(41, 51):
     print("Starting Experiment", random_seed)
     environment = Environment(settings=simulation_settings)
     # spawn initial agents
-    for n in range(0, 10):  # int(N_AGENTS/2)):
+    for n in range(0, simulation_settings["n_agents"]): 
         environment.spawn_agent()
     # spawn initial tasks
-    for n in range(0, 10):  # int(N_AGENTS/2)):
+    for n in range(0, simulation_settings["n_agents"]):
         environment.spawn_task()
     # simulation loop
     while environment.time < environment.settings["time_simulation_duration"]:

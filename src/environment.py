@@ -54,8 +54,10 @@ class Environment:
                     time=self.time,
                 )
             )
-        except Exception:
-            print("Grid is too crowded, cannot spawn new task at the moment.")
+        except Exception as e:
+            if self.settings["debug_statements"]:
+                print("Exception:", e)
+                print("Grid is too crowded, cannot spawn new task at the moment.")
             pass
 
     def assign_open_tasks(self) -> None:
@@ -195,6 +197,8 @@ class Environment:
             if routes is not None:
                 for idx, agent in enumerate(planning_relevant_agents):
                     agent.route = routes[idx]
+            else: # Fallback: DECENTRALIZED_RESPECT
+                self.handle_agents_route_planning_decentralized_respect()
 
     def handle_agents_route_planning_decentralized_respect(self) -> None:
         """
@@ -372,9 +376,10 @@ class Environment:
                                 change_to_path=alternative_path_other
                             )
                         else:
-                            raise ValueError(
-                                f"Conflict for agent {conflicting_agent.id} but no alternative path found."
-                            )
+                            pass
+                            # raise ValueError(
+                            #     f"Conflict for agent {conflicting_agent.id} but no alternative path found."
+                            # )
                         continue
 
                     # otherwise, break the loop
