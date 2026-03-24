@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple, Set, Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     import numpy as np
+    from numpy.typing import NDArray
     from agent import Agent
 
 import heapq
@@ -30,9 +31,9 @@ class AStarPathPlanner:
     COUNTER: int = 0
 
     def __init__(
-        self, static_occupancy_grid: "np.ndarray", astar_params: Dict[str, Any]
+        self, static_occupancy_grid: NDArray[np.int_], astar_params: Dict[str, Any]
     ):
-        self.static_occupancy_grid: "np.ndarray" = static_occupancy_grid
+        self.static_occupancy_grid: NDArray[np.int_] = static_occupancy_grid
         self.astar_params: Dict[str, Any] = astar_params
 
     def manhattan(self, a: Tuple[int, int], b: Tuple[int, int]) -> int:
@@ -42,7 +43,7 @@ class AStarPathPlanner:
         self,
         start: Tuple[int, int, int],
         goal: Tuple[int, int],
-        dynamic_occupancy: Optional["np.ndarray"] = None,
+        dynamic_occupancy: Optional[NDArray[np.bool_]] = None,
     ) -> Optional[List[PathPlannerState]]:
         """
         This is the implementation of a astar algorithm for a robot that needs

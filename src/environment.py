@@ -201,6 +201,7 @@ class Environment:
         This works as follows: every new agent will plan its route around already existing planned routes, no negotiation, just adaption to others.
         """
         self.print_debug_log()
+
         # conduct decentralized planning for running agents with jobs who finished their current route
         planning_relevant_agents: List[Agent] = [
             agent
@@ -234,16 +235,20 @@ class Environment:
             and len(agent.route) == 0
             and len(agent.target_position) == 2
         ]
+
         for agent in planning_relevant_agents:
             # try for this agent to plan, given the restrictions it step by step considers
             planning_finished: bool = False
             agents_considered: List[Agent] = []
+
             # determine plan with negotiating with others
             current_path: Optional[List[PathPlannerState]] = None
             agents_had_conflict_with: List[Agent] = []
+
             # safety guard to avoid infinite negotiation loops
             max_iterations: int = max(10, len(self.agents) * 2)
             iter_count: int = 0
+
             while not planning_finished:
                 iter_count += 1
                 if iter_count > max_iterations:
@@ -252,6 +257,7 @@ class Environment:
                             f"\tMax negotiation iterations reached for agent {agent.id}, aborting negotiation"
                         )
                     break
+
                 # rebuild full reservation table each iteration so we always check conflicts against the
                 # latest routes other agents may have switched to during negotiation
                 reservation_table_complete = GridTools.create_3D_reservation_grid(
@@ -288,18 +294,22 @@ class Environment:
                     goal=(agent.target_position[0], agent.target_position[1]),
                     dynamic_occupancy=dynamic_occupancy_grid,
                 )
+
                 # if cannot plan, just abort for now
                 if current_path is None:
                     planning_finished = True
                     break
+
                 # determine conflicts with current plan
                 conflicts = GridTools.detect_conflicts(
                     current_path, reservation_table=reservation_table_complete
                 )
+
                 # if no conflicts, found the path and can quit
                 if len(conflicts) == 0:
                     planning_finished = True
                     break
+
                 # try to solve found conflicts
                 if self.settings["debug_statements"]:
                     print(
@@ -309,6 +319,7 @@ class Environment:
                         len(conflicts),
                         "conflicts",
                     )
+
                 # try to resolve conflicts with everyone
                 all_conflicts_resolved: bool = True
                 for conflict in conflicts:
@@ -365,14 +376,17 @@ class Environment:
                                 f"Conflict for agent {conflicting_agent.id} but no alternative path found."
                             )
                         continue
+
                     # otherwise, break the loop
                     else:
                         all_conflicts_resolved = False
                         break
+
                 # if others changed their plans and agreed, we can keep this
                 if all_conflicts_resolved:
                     planning_finished = True
                     break
+
                 # otherwise, didnt work out, so we have to add them into our agents_considered constraints
                 for conflict in conflicts:
                     conflicting_agent = self.get_agent(conflict["conflicting_agent"])
@@ -387,6 +401,7 @@ class Environment:
                         current_path = None
                         planning_finished = True
                         break
+
             # if successful, assign it
             if current_path is not None:
                 current_route = agent.path_planner.convert_path_to_route(current_path)

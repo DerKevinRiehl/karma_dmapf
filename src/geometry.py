@@ -5,6 +5,7 @@ if TYPE_CHECKING:
     from agent import Agent
     from environment import Environment
     from planner_path_astar import PathPlannerState
+    from numpy.typing import NDArray
 
 
 from constants import (
@@ -25,11 +26,11 @@ class GridTools:
         time_horizon: int,
         agent_list: Optional[List[Agent]] = None,
         tabu_agent: Optional[Agent] = None,
-    ) -> np.ndarray:
+    ) -> NDArray[np.bool_]:
         reservation_grid = GridTools.create_3D_reservation_grid(
             environment, time_horizon, agent_list, tabu_agent
         )
-        dynamic_occupancy: np.ndarray = reservation_grid != 0
+        dynamic_occupancy: NDArray[np.bool_] = reservation_grid != 0
         return dynamic_occupancy
 
     @staticmethod
@@ -38,9 +39,10 @@ class GridTools:
         time_horizon: int,
         agent_list: Optional[List[Agent]] = None,
         tabu_agent: Optional[Agent] = None,
-    ) -> np.ndarray:
-        reservation_table: np.ndarray = np.zeros(
-            (time_horizon + 1, environment.grid.grid_size, environment.grid.grid_size)
+    ) -> NDArray[np.int_]:
+        reservation_table: NDArray[np.int_] = np.zeros(
+            (time_horizon + 1, environment.grid.grid_size, environment.grid.grid_size),
+            dtype=int,
         )
 
         if agent_list is None:
@@ -88,7 +90,7 @@ class GridTools:
 
     @staticmethod
     def detect_conflicts(
-        path: List[PathPlannerState], reservation_table: np.ndarray
+        path: List[PathPlannerState], reservation_table: NDArray[np.int_]
     ) -> List[Dict[str, Any]]:
         conflicts: List[Dict[str, Any]] = []
         conflicting_agents: List[int] = []
@@ -115,8 +117,8 @@ class GridTools:
 class Grid:
     def __init__(self, grid_size: int):
         self.grid_size: int = grid_size
-        self.occupancy_grid: np.ndarray = SQUARE_SYMBOL_EMPTY * np.ones(
-            (grid_size, grid_size)
+        self.occupancy_grid: NDArray[np.int_] = SQUARE_SYMBOL_EMPTY * np.ones(
+            (grid_size, grid_size), dtype=int
         )
 
     def get_random_empty_square(self) -> Optional[List[int]]:
@@ -129,7 +131,7 @@ class Grid:
 
     @staticmethod
     def _occupy_with_border(
-        grid: np.ndarray, x: int, y: int, border: int, occupied_symbol: int
+        grid: NDArray[np.int_], x: int, y: int, border: int, occupied_symbol: int
     ) -> None:
         max_x: int = len(grid)
         max_y: int = len(grid[0])
@@ -143,7 +145,7 @@ class Grid:
     def get_random_empty_square_no_tasks(
         self, environment: Environment, pos: Optional[List[int]] = None
     ) -> Optional[List[int]]:
-        temp_occupancy_grid: np.ndarray = self.occupancy_grid.copy()
+        temp_occupancy_grid: NDArray[np.int_] = self.occupancy_grid.copy()
 
         # other tasks
         for task in environment.tasks:

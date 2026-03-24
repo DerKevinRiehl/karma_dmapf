@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, Tuple, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from numpy.typing import NDArray
     from task import Task
     from environment import Environment
     from geometry import Grid
@@ -162,7 +163,7 @@ class Agent:
             self.current_orientation = AGENT_ORIENTATION_WEST
 
     def _determine_intersection_free_path(
-        self, dynamic_occupancy_grid: np.ndarray
+        self, dynamic_occupancy_grid: NDArray[np.bool_]
     ) -> Optional[List["PathPlannerState"]]:
         if not self.target_position:
             return None
@@ -179,7 +180,7 @@ class Agent:
         return path
 
     def _determine_idle_parking_path(
-        self, dynamic_occupancy_grid: np.ndarray
+        self, dynamic_occupancy_grid: NDArray[np.bool_]
     ) -> Optional[List["PathPlannerState"]]:
         x0, y0 = self.current_position
 

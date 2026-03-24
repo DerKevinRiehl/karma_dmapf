@@ -1,9 +1,10 @@
 from __future__ import annotations
-from typing import List, Tuple, TYPE_CHECKING
+from typing import List, Tuple, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from agent import Agent
     from task import Task
+    from numpy.typing import NDArray
 
 import numpy as np
 from geometry import Geometry
@@ -56,7 +57,7 @@ class Planner_Assignment_Central:
         open_tasks: List["Task"],
         time: int,
         alpha: float = 0.2,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[NDArray[np.int_], NDArray[np.int_]]:
         """
         Compute optimal agent-task assignment using Hungarian algorithm.
         The assignment costs include travel time (manhattan distance + rotation)
@@ -74,7 +75,7 @@ class Planner_Assignment_Central:
         if num_agents == 0 or num_tasks == 0:
             return np.array([]), np.array([])
 
-        cost_matrix: np.ndarray = np.zeros((num_agents, num_tasks))
+        cost_matrix: NDArray[np.float64] = np.zeros((num_agents, num_tasks))
         for i, agent in enumerate(candidate_agents):
             start_pos, start_time, orientation = (
                 Planner_Assignment_Central.estimate_agent_availability(agent, time)

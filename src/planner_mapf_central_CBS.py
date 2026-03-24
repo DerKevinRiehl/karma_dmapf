@@ -10,6 +10,7 @@ import numpy as np
 from planner_path_astar import AStarPathPlanner
 
 if TYPE_CHECKING:
+    from numpy.typing import NDArray
     from planner_path_astar import PathPlannerState
 
 
@@ -47,11 +48,11 @@ class Planner_CBS:
 
     def __init__(
         self,
-        grid: np.ndarray,
+        grid: NDArray[np.int_],
         cbs_params: Dict[str, Any],
         astar_params: Dict[str, Any],
     ):
-        self.grid: np.ndarray = grid
+        self.grid: NDArray[np.int_] = grid
         self.cbs_params: Dict[str, Any] = cbs_params
         self.astar_planner: AStarPathPlanner = AStarPathPlanner(
             grid, astar_params=astar_params
@@ -84,8 +85,8 @@ class Planner_CBS:
 
     def get_dynamic_occupancy_grid(
         self, constraints: List[CBS_Constraint], agent: int
-    ) -> np.ndarray:
-        dynamic_occupancy: np.ndarray = np.zeros(
+    ) -> NDArray[np.bool_]:
+        dynamic_occupancy: NDArray[np.bool_] = np.zeros(
             (
                 self.astar_planner.astar_params["planning_horizon"] + 1,
                 self.grid.shape[0],
