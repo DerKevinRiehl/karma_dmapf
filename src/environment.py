@@ -197,8 +197,10 @@ class Environment:
             if routes is not None:
                 for idx, agent in enumerate(planning_relevant_agents):
                     agent.route = routes[idx]
-            else: # Fallback: DECENTRALIZED_RESPECT
-                self.handle_agents_route_planning_decentralized_respect()
+            else: # Fallback: DECENTRALIZED_ALTRUISTIC
+                self.handle_agents_route_planning_decentralized_negotiate(
+                    NegotiationStrategy.negotiate_altruistic
+                )
 
     def handle_agents_route_planning_decentralized_respect(self) -> None:
         """

@@ -14,7 +14,11 @@ class NegotiationStrategy:
 
     @staticmethod
     def negotiate_egoistic(cost_other: int, cost_mine: int) -> bool:
-        agreement_to_solve_conflict: bool = cost_other <= 0
+        agreement_to_solve_conflict: bool 
+        if cost_other <= 0:
+            agreement_to_solve_conflict = True
+        else:
+            agreement_to_solve_conflict = False
         return agreement_to_solve_conflict
 
     @staticmethod
@@ -37,25 +41,21 @@ class NegotiationStrategy:
         agent_self: Agent,
         karma_params,
     ) -> bool:
-        # effective cost = immediate cost - weighted karma
-        score_other: float = cost_other - karma_params["lambda"] * agent_other.karma_balance
-        score_self: float = cost_mine - karma_params["lambda"] * agent_self.karma_balance
-    
-        if score_self > score_other:
-            # other agent replans → reward cooperation
-            new_other = agent_other.karma_balance + cost_other * karma_params["gamma"]
-            new_self = agent_self.karma_balance - cost_mine * karma_params["gamma"]
-    
-            # only allow trade if both stay >= 0
-            if new_other < 0 or new_self < 0:
-                agreement_to_solve_conflict = False
-                
-            agent_other.karma_balance = new_other
-            agent_self.karma_balance = new_self
+        agreement_to_solve_conflict: bool
+        if cost_other <= 0:
             agreement_to_solve_conflict = True
-            
-        elif score_self < score_other:
-            agreement_to_solve_conflict = False
-        else:  # cost_mine == cost_other
-            agreement_to_solve_conflict = np.random.choice([True, False])
+        else:
+            if cost_mine > cost_other:
+                cost_delta = cost_mine - cost_other
+                if cost_delta >= karma_params["delta_threshold"]: 
+                    if agent_self.karma_balance >= agent_other.karma_balance and agent_self.karma_balance >= karma_params["karma_payment"]:
+                        agreement_to_solve_conflict = True
+                        agent_self.karma_balance = agent_self.karma_balance - karma_params["karma_payment"]
+                        agent_other.karma_balance = agent_other.karma_balance + karma_params["karma_payment"]
+                    else:
+                        agreement_to_solve_conflict = False
+                else:                    
+                    agreement_to_solve_conflict = False
+            else:
+                agreement_to_solve_conflict = False
         return agreement_to_solve_conflict

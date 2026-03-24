@@ -41,9 +41,9 @@ simulation_settings = {
         "PLANNING_HORIZON": 100,
     },
     "params_karma": {
-        "initial_karma": 5,
-        "lambda": 0.1,
-        "gamma": 1
+        "initial_karma": 10,
+        "delta_threshold": 1,
+        "karma_payment": 1,
     },
     "debug_statements": True,
 }

@@ -26,7 +26,7 @@ random_seeds = [41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
 grid_sizes = [5]#, 10, 15, 20]
 
 n_agents_map = {
-    5: [1, 2, 3, 4, 5, ],#6, 7, 8, 9, 10],
+    5:  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     10: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     15: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     20: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -55,9 +55,9 @@ for grid_size in grid_sizes:
                     "PLANNING_HORIZON": 100,
                 },
                 "params_karma": {
-                    "initial_karma": 5,
-                    "lambda": 0.1,
-                    "gamma": 0.1
+                    "initial_karma": 10,
+                    "delta_threshold": 1,
+                    "karma_payment": 1,
                 },
                 "debug_statements": False,
             }
@@ -488,95 +488,86 @@ Total cost:      mean = 910.500 	 std = 4.455
 Avg cost:        mean = 10.696 	 std = 0.327
 Distribution:    mean = 2.852 	 std = 0.176
 =====================================================
-
 =====================================================
 Experiment Results [2 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
-A* calls:        mean = 10742.300 	 std = 837.776
-Completed tasks: mean = 168.800 	 std = 3.919
-Total cost:      mean = 1821.600 	 std = 8.405
-Avg cost:        mean = 10.798 	 std = 0.281
-Distribution:    mean = 2.772 	 std = 0.130
+A* calls:        mean = 11407.300 	 std = 809.617
+Completed tasks: mean = 168.400 	 std = 2.458
+Total cost:      mean = 1821.800 	 std = 6.177
+Avg cost:        mean = 10.821 	 std = 0.167
+Distribution:    mean = 2.758 	 std = 0.087
 =====================================================
-
 =====================================================
 Experiment Results [3 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
-A* calls:        mean = 24109.400 	 std = 1534.891
-Completed tasks: mean = 253.300 	 std = 3.579
-Total cost:      mean = 2733.500 	 std = 5.714
-Avg cost:        mean = 10.794 	 std = 0.154
-Distribution:    mean = 2.957 	 std = 0.160
+A* calls:        mean = 23376.100 	 std = 1565.084
+Completed tasks: mean = 256.300 	 std = 2.052
+Total cost:      mean = 2726.100 	 std = 5.224
+Avg cost:        mean = 10.637 	 std = 0.084
+Distribution:    mean = 2.925 	 std = 0.130
 =====================================================
-
 =====================================================
 Experiment Results [4 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
-A* calls:        mean = 44633.400 	 std = 4453.413
-Completed tasks: mean = 336.400 	 std = 4.271
-Total cost:      mean = 3644.900 	 std = 10.559
-Avg cost:        mean = 10.837 	 std = 0.151
-Distribution:    mean = 3.071 	 std = 0.117
+A* calls:        mean = 43177.000 	 std = 4783.167
+Completed tasks: mean = 340.000 	 std = 4.266
+Total cost:      mean = 3638.300 	 std = 6.649
+Avg cost:        mean = 10.703 	 std = 0.139
+Distribution:    mean = 2.948 	 std = 0.065
 =====================================================
-
 =====================================================
 Experiment Results [5 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
-A* calls:        mean = 74146.100 	 std = 6520.695
-Completed tasks: mean = 417.000 	 std = 4.775
-Total cost:      mean = 4560.900 	 std = 6.252
-Avg cost:        mean = 10.939 	 std = 0.126
-Distribution:    mean = 3.163 	 std = 0.136
+A* calls:        mean = 77670.000 	 std = 17932.148
+Completed tasks: mean = 425.800 	 std = 7.236
+Total cost:      mean = 4551.100 	 std = 7.190
+Avg cost:        mean = 10.692 	 std = 0.193
+Distribution:    mean = 2.929 	 std = 0.123
 =====================================================
-
 =====================================================
 Experiment Results [6 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
-A* calls:        mean = 128263.700 	 std = 7622.095
-Completed tasks: mean = 500.900 	 std = 5.356
-Total cost:      mean = 5468.000 	 std = 11.402
-Avg cost:        mean = 10.918 	 std = 0.126
-Distribution:    mean = 3.307 	 std = 0.128
+A* calls:        mean = 132168.700 	 std = 26922.454
+Completed tasks: mean = 510.600 	 std = 8.027
+Total cost:      mean = 5457.900 	 std = 6.978
+Avg cost:        mean = 10.692 	 std = 0.177
+Distribution:    mean = 3.029 	 std = 0.103
 =====================================================
-
 =====================================================
 Experiment Results [7 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
-A* calls:        mean = 209982.500 	 std = 27363.471
-Completed tasks: mean = 583.100 	 std = 7.106
-Total cost:      mean = 6381.600 	 std = 8.452
-Avg cost:        mean = 10.946 	 std = 0.135
-Distribution:    mean = 3.512 	 std = 0.070
+A* calls:        mean = 230870.500 	 std = 37196.586
+Completed tasks: mean = 589.400 	 std = 6.515
+Total cost:      mean = 6375.000 	 std = 15.264
+Avg cost:        mean = 10.818 	 std = 0.135
+Distribution:    mean = 3.177 	 std = 0.128
 =====================================================
-
 =====================================================
 Experiment Results [8 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
-A* calls:        mean = 321554.300 	 std = 23428.780
-Completed tasks: mean = 656.200 	 std = 8.976
-Total cost:      mean = 7305.800 	 std = 14.627
-Avg cost:        mean = 11.136 	 std = 0.166
-Distribution:    mean = 3.710 	 std = 0.157
+A* calls:        mean = 377555.700 	 std = 43255.569
+Completed tasks: mean = 665.000 	 std = 7.759
+Total cost:      mean = 7291.800 	 std = 16.887
+Avg cost:        mean = 10.967 	 std = 0.145
+Distribution:    mean = 3.214 	 std = 0.103
 =====================================================
-
 =====================================================
 Experiment Results [9 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
-A* calls:        mean = 487888.900 	 std = 28434.127
-Completed tasks: mean = 727.200 	 std = 8.807
-Total cost:      mean = 8212.900 	 std = 17.598
-Avg cost:        mean = 11.296 	 std = 0.145
-Distribution:    mean = 3.898 	 std = 0.166
+A* calls:        mean = 526167.700 	 std = 77633.343
+Completed tasks: mean = 746.800 	 std = 5.930
+Total cost:      mean = 8203.300 	 std = 13.062
+Avg cost:        mean = 10.985 	 std = 0.096
+Distribution:    mean = 3.340 	 std = 0.071
 =====================================================
-
 =====================================================
 Experiment Results [10 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
-A* calls:        mean = 678132.100 	 std = 46317.857
-Completed tasks: mean = 784.700 	 std = 7.198
-Total cost:      mean = 9037.500 	 std = 19.428
-Avg cost:        mean = 11.518 	 std = 0.119
-Distribution:    mean = 4.132 	 std = 0.122
+A* calls:        mean = 816255.700 	 std = 95092.434
+Completed tasks: mean = 803.800 	 std = 6.161
+Total cost:      mean = 9023.200 	 std = 26.551
+Avg cost:        mean = 11.226 	 std = 0.101
+Distribution:    mean = 3.481 	 std = 0.109
 =====================================================
 """
 
@@ -588,7 +579,7 @@ A* Calls
 | DECENTRALIZED_RESPECT              | 3627.2 (95.3) | 8616.4 (398.2)  | 14903.6 (515.1)  | 23603.7 (1281.8)  | 33813.4 (2082.8)  | 49391.7 (2447.0)   | 71365.0 (5322.2)   | 93859.8 (4993.3)   | 137436.5 (14004.0) | 192568.9 (17932.3)   |
 | DECENTRALIZED_NEGOTIATE_EGOISTIC   | 3627.2 (95.3) | 11827.1 (588.4) | 24001.0 (2077.5) | 57626.1 (19747.2) | 85014.5 (16216.9) | 159407.4 (36010.8) | 282301.2 (42488.5) | 460835.5 (74604.5) | 672043.0 (88455.7) | 1092802.2 (102441.0) |
 | DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 3627.2 (95.3) | 10971.6 (554.2) | 22421.4 (1728.5) | 41284.0 (2358.1)  | 71787.9 (9656.9)  | 117762.1 (11983.3) | 190382.8 (14146.9) | 286685.2 (22163.8) | 428890.9 (36802.2) | 643188.6 (52284.9)   |
-| DECENTRALIZED_NEGOTIATE_KARMA      | 3627.2 (95.3) | 10742.3 (837.8) | 24109.4 (1534.9) | 44633.4 (4453.4)  | 74146.1 (6520.7)  | 128263.7 (7622.1)  | 209982.5 (27363.5) | 321554.3 (23428.8) | 487888.9 (28434.1) | 678132.1 (46317.9)   |
+| DECENTRALIZED_NEGOTIATE_KARMA      | 3627.2 (95.3) | 11407.3 (809.6) | 23376.1 (1565.1) | 43177.0 (4783.2)  | 77670.0 (17932.1) | 132168.7 (26922.5) | 230870.5 (37196.6) | 377555.7 (43255.6) | 526167.7 (77633.3) | 816255.7 (95092.4)   |
 
 Completed Tasks
 | Algorithm                          | 1          | 2           | 3           | 4           | 5           | 6           | 7           | 8           | 9            | 10           |
@@ -596,7 +587,7 @@ Completed Tasks
 | DECENTRALIZED_RESPECT              | 85.2 (2.6) | 166.5 (3.8) | 247.7 (3.0) | 325.4 (6.1) | 401.9 (4.2) | 472.9 (6.5) | 538.5 (7.8) | 604.1 (9.7) | 654.6 (9.0)  | 701.7 (7.8)  |
 | DECENTRALIZED_NEGOTIATE_EGOISTIC   | 85.2 (2.6) | 168.0 (3.4) | 252.5 (2.8) | 340.1 (5.5) | 421.9 (4.6) | 505.4 (6.4) | 586.1 (6.7) | 657.8 (8.6) | 734.3 (5.4)  | 792.2 (7.4)  |
 | DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 85.2 (2.6) | 170.8 (3.2) | 256.9 (3.5) | 340.8 (6.3) | 426.9 (6.4) | 513.5 (4.7) | 595.0 (9.3) | 674.9 (6.1) | 752.4 (10.0) | 815.5 (11.7) |
-| DECENTRALIZED_NEGOTIATE_KARMA      | 85.2 (2.6) | 168.8 (3.9) | 253.3 (3.6) | 336.4 (4.3) | 417.0 (4.8) | 500.9 (5.4) | 583.1 (7.1) | 656.2 (9.0) | 727.2 (8.8)  | 784.7 (7.2)  |
+| DECENTRALIZED_NEGOTIATE_KARMA      | 85.2 (2.6) | 168.4 (2.5) | 256.3 (2.1) | 340.0 (4.3) | 425.8 (7.2) | 510.6 (8.0) | 589.4 (6.5) | 665.0 (7.8) | 746.8 (5.9)  | 803.8 (6.2)  |
 
 Total Cost
 | Algorithm                          | 1           | 2            | 3            | 4             | 5            | 6             | 7             | 8             | 9             | 10            |
@@ -604,7 +595,7 @@ Total Cost
 | DECENTRALIZED_RESPECT              | 910.5 (4.5) | 1822.0 (7.9) | 2737.0 (6.0) | 3657.4 (7.3)  | 4575.6 (6.1) | 5496.5 (7.4)  | 6422.7 (16.8) | 7340.7 (11.2) | 8294.4 (18.7) | 9152.2 (23.6) |
 | DECENTRALIZED_NEGOTIATE_EGOISTIC   | 910.5 (4.5) | 1822.2 (5.8) | 2734.6 (8.8) | 3646.4 (5.2)  | 4557.7 (5.8) | 5465.2 (14.6) | 6375.7 (10.9) | 7299.4 (13.5) | 8218.0 (16.6) | 9049.0 (26.1) |
 | DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 910.5 (4.5) | 1818.9 (4.3) | 2732.0 (8.0) | 3636.1 (7.7)  | 4554.1 (7.6) | 5460.3 (7.5)  | 6371.5 (11.5) | 7284.6 (9.2)  | 8197.1 (11.0) | 9012.9 (25.2) |
-| DECENTRALIZED_NEGOTIATE_KARMA      | 910.5 (4.5) | 1821.6 (8.4) | 2733.5 (5.7) | 3644.9 (10.6) | 4560.9 (6.3) | 5468.0 (11.4) | 6381.6 (8.5)  | 7305.8 (14.6) | 8212.9 (17.6) | 9037.5 (19.4) |
+| DECENTRALIZED_NEGOTIATE_KARMA      | 910.5 (4.5) | 1821.8 (6.2) | 2726.1 (5.2) | 3638.3 (6.6)  | 4551.1 (7.2) | 5457.9 (7.0)  | 6375.0 (15.3) | 7291.8 (16.9) | 8203.3 (13.1) | 9023.2 (26.6) |
 
 Avg Cost
 | Algorithm                          | 1            | 2            | 3            | 4            | 5            | 6            | 7            | 8            | 9            | 10           |
@@ -612,7 +603,7 @@ Avg Cost
 | DECENTRALIZED_RESPECT              | 10.70 (0.33) | 10.95 (0.27) | 11.05 (0.15) | 11.24 (0.22) | 11.39 (0.12) | 11.63 (0.17) | 11.93 (0.19) | 12.16 (0.19) | 12.67 (0.19) | 13.05 (0.17) |
 | DECENTRALIZED_NEGOTIATE_EGOISTIC   | 10.70 (0.33) | 10.85 (0.24) | 10.83 (0.15) | 10.73 (0.19) | 10.80 (0.12) | 10.82 (0.16) | 10.88 (0.13) | 11.10 (0.16) | 11.19 (0.08) | 11.42 (0.12) |
 | DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 10.70 (0.33) | 10.65 (0.22) | 10.64 (0.16) | 10.67 (0.20) | 10.67 (0.17) | 10.63 (0.10) | 10.71 (0.18) | 10.79 (0.10) | 10.90 (0.15) | 11.06 (0.18) |
-| DECENTRALIZED_NEGOTIATE_KARMA      | 10.70 (0.33) | 10.80 (0.28) | 10.79 (0.15) | 10.84 (0.15) | 10.94 (0.13) | 10.92 (0.13) | 10.95 (0.14) | 11.14 (0.17) | 11.30 (0.15) | 11.52 (0.12) |
+| DECENTRALIZED_NEGOTIATE_KARMA      | 10.70 (0.33) | 10.82 (0.17) | 10.64 (0.08) | 10.70 (0.14) | 10.69 (0.19) | 10.69 (0.18) | 10.82 (0.14) | 10.97 (0.15) | 10.99 (0.10) | 11.23 (0.10) |
 
 Distribution
 | Algorithm                          | 1           | 2           | 3           | 4           | 5           | 6           | 7           | 8           | 9           | 10          |
@@ -620,5 +611,5 @@ Distribution
 | DECENTRALIZED_RESPECT              | 2.85 (0.18) | 2.81 (0.12) | 3.05 (0.08) | 3.21 (0.11) | 3.37 (0.08) | 3.48 (0.12) | 3.73 (0.11) | 3.94 (0.11) | 4.26 (0.10) | 4.46 (0.10) |
 | DECENTRALIZED_NEGOTIATE_EGOISTIC   | 2.85 (0.18) | 2.75 (0.10) | 2.86 (0.13) | 2.98 (0.13) | 2.97 (0.11) | 3.09 (0.08) | 3.19 (0.10) | 3.27 (0.06) | 3.45 (0.11) | 3.60 (0.09) |
 | DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 2.85 (0.18) | 2.80 (0.18) | 2.91 (0.12) | 2.92 (0.11) | 3.04 (0.09) | 3.01 (0.10) | 3.19 (0.08) | 3.21 (0.13) | 3.29 (0.11) | 3.47 (0.17) |
-| DECENTRALIZED_NEGOTIATE_KARMA      | 2.85 (0.18) | 2.77 (0.13) | 2.96 (0.16) | 3.07 (0.12) | 3.16 (0.14) | 3.31 (0.13) | 3.51 (0.07) | 3.71 (0.16) | 3.90 (0.17) | 4.13 (0.12) |
+| DECENTRALIZED_NEGOTIATE_KARMA      | 2.85 (0.18) | 2.76 (0.09) | 2.93 (0.13) | 2.95 (0.07) | 2.93 (0.12) | 3.03 (0.10) | 3.18 (0.13) | 3.21 (0.10) | 3.34 (0.07) | 3.48 (0.11) |
 """
