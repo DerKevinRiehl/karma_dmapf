@@ -247,8 +247,7 @@ class Agent:
         path = self._determine_intersection_free_path(dynamic_occupancy_grid)
         if path is not None:
             route = self.path_planner.convert_path_to_route(path)
-            if route:
-                self.route = route
+            self.route = route if route is not None else []
 
     def determine_cost_to_change(
         self, to_avoid_path: List["PathPlannerState"]
