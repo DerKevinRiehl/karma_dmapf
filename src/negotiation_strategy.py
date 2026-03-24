@@ -33,23 +33,29 @@ class NegotiationStrategy:
     def negotiate_karma(
         cost_other: int,
         cost_mine: int,
-        agent_other: "Agent",
-        agent_self: "Agent",
-        lambda_: float = 0.1,
-        gamma: int = 1,
+        agent_other: Agent,
+        agent_self: Agent,
+        karma_params,
     ) -> bool:
         # effective cost = immediate cost - weighted karma
-        score_other: float = cost_other - lambda_ * agent_other.karma_balance
-        score_self: float = cost_mine - lambda_ * agent_self.karma_balance
-
-        # decide who replans
-        if score_other < score_self:
+        score_other: float = cost_other - karma_params["lambda"] * agent_other.karma_balance
+        score_self: float = cost_mine - karma_params["lambda"] * agent_self.karma_balance
+    
+        if score_self > score_other:
             # other agent replans → reward cooperation
-            agent_other.karma_balance += gamma
-            agent_self.karma_balance -= gamma
-            return True
-        else:
-            # self replans → reward cooperation
-            agent_other.karma_balance -= gamma
-            agent_self.karma_balance += gamma
-            return False
+            new_other = agent_other.karma_balance + cost_other * karma_params["gamma"]
+            new_self = agent_self.karma_balance - cost_mine * karma_params["gamma"]
+    
+            # only allow trade if both stay >= 0
+            if new_other < 0 or new_self < 0:
+                agreement_to_solve_conflict = False
+                
+            agent_other.karma_balance = new_other
+            agent_self.karma_balance = new_self
+            agreement_to_solve_conflict = True
+            
+        elif score_self < score_other:
+            agreement_to_solve_conflict = False
+        else:  # cost_mine == cost_other
+            agreement_to_solve_conflict = np.random.choice([True, False])
+        return agreement_to_solve_conflict

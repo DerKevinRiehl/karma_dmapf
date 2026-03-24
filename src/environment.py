@@ -362,7 +362,7 @@ class Environment:
                     agent.route = []
                     if use_agent_params:
                         agreement_to_solve_conflict = negotiation_function(
-                            cost_other, cost_mine, conflicting_agent, agent
+                            cost_other, cost_mine, conflicting_agent, agent, self.settings["params_karma"]
                         )
                     else:
                         agreement_to_solve_conflict = negotiation_function(

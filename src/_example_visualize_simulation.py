@@ -40,7 +40,11 @@ simulation_settings = {
         "MAX_IDLE_TIME_CONSIDERED": 5,
         "PLANNING_HORIZON": 100,
     },
-    "params_karma": {"initial_karma": 5},
+    "params_karma": {
+        "initial_karma": 5,
+        "lambda": 0.1,
+        "gamma": 1
+    },
     "debug_statements": True,
 }
 
