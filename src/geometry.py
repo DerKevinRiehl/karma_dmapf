@@ -27,8 +27,10 @@ class GridTools:
         agent_list: Optional[List[Agent]] = None,
         tabu_agent: Optional[Agent] = None,
     ) -> NDArray[np.bool_]:
+        # For decentralized planning we want to consider just-vacated positions as occupied
+        # for one additional timestep to prevent immediate re-entry. Enable that here.
         reservation_grid = GridTools.create_3D_reservation_grid(
-            environment, time_horizon, agent_list, tabu_agent
+            environment, time_horizon, agent_list, tabu_agent, consider_vacated_positions=True
         )
         dynamic_occupancy: NDArray[np.bool_] = reservation_grid != 0
         return dynamic_occupancy
@@ -39,7 +41,14 @@ class GridTools:
         time_horizon: int,
         agent_list: Optional[List[Agent]] = None,
         tabu_agent: Optional[Agent] = None,
+        consider_vacated_positions: bool = False,
     ) -> NDArray[np.int_]:
+        """Create a 3D reservation table (time,x,y) with optional blocking of just-vacated cells.
+
+        If consider_vacated_positions is True, whenever an agent occupies a cell at time t we also
+        mark that same cell as occupied at time t+1 (if within the horizon). This prevents another
+        agent from stepping into a cell immediately after it was vacated.
+        """
         reservation_table: NDArray[np.int_] = np.zeros(
             (time_horizon + 1, environment.grid.grid_size, environment.grid.grid_size),
             dtype=int,
@@ -59,6 +68,8 @@ class GridTools:
             # first position
             if len(agent.route) > 0:
                 reservation_table[0][current_pos[0]][current_pos[1]] = agent.id
+                if consider_vacated_positions and 1 < reservation_table.shape[0]:
+                    reservation_table[1][current_pos[0]][current_pos[1]] = agent.id
             time_counter += 1
 
             # part of route
@@ -73,18 +84,20 @@ class GridTools:
                     current_pos[0] += 1
                 elif step == "W":
                     current_pos[0] -= 1
-                reservation_table[time_counter][current_pos[0]][
-                    current_pos[1]
-                ] = agent.id
+
+                if time_counter < reservation_table.shape[0]:
+                    reservation_table[time_counter][current_pos[0]][current_pos[1]] = agent.id
+                    if consider_vacated_positions and (time_counter + 1) < reservation_table.shape[0]:
+                        reservation_table[time_counter + 1][current_pos[0]][current_pos[1]] = agent.id
                 time_counter += 1
                 if time_counter == reservation_table.shape[0]:
                     break
             # end
 
             while time_counter < time_horizon:
-                reservation_table[time_counter][current_pos[0]][
-                    current_pos[1]
-                ] = agent.id
+                reservation_table[time_counter][current_pos[0]][current_pos[1]] = agent.id
+                if consider_vacated_positions and (time_counter + 1) < reservation_table.shape[0]:
+                    reservation_table[time_counter + 1][current_pos[0]][current_pos[1]] = agent.id
                 time_counter += 1
         return reservation_table
 

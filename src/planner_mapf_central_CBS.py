@@ -63,21 +63,52 @@ class Planner_CBS:
     ) -> Optional[Dict[str, Any]]:
         max_len: int = max(len(p) for p in paths) if paths else 0
 
+        # Check vertex conflicts (same cell at same time) and
+        # "just-vacated" conflicts (one agent at cell at time t and another at same cell at time t+1).
         for t in range(max_len):
-            positions: Dict[Tuple[int, int], int] = {}
+            positions_t: Dict[Tuple[int, int], int] = {}
+            positions_t1: Dict[Tuple[int, int], int] = {}
+
             for i, path in enumerate(paths):
-                s: PathPlannerState
+                # position at time t
+                s_t: Optional[PathPlannerState]
                 if t < len(path):
-                    s = path[t]
-                elif t < len(path) + self.cbs_params["MAX_IDLE_TIME_CONSIDERED"]:
-                    s = path[-1]
+                    s_t = path[t]
+                elif t < len(path) + self.cbs_params.get("MAX_IDLE_TIME_CONSIDERED", 0):
+                    s_t = path[-1]
                 else:
-                    continue  # <- makes idle agent disappear
-                    # s = path[-1]
-                pos: Tuple[int, int] = (s.x, s.y)
-                if pos in positions:
-                    return {"time": t, "a1": positions[pos], "a2": i, "pos": pos}
-                positions[pos] = i
+                    s_t = None
+
+                # position at time t+1
+                s_t1: Optional[PathPlannerState]
+                if t + 1 < len(path):
+                    s_t1 = path[t + 1]
+                elif t + 1 < len(path) + self.cbs_params.get("MAX_IDLE_TIME_CONSIDERED", 0):
+                    s_t1 = path[-1]
+                else:
+                    s_t1 = None
+
+                if s_t is not None:
+                    pos_t: Tuple[int, int] = (s_t.x, s_t.y)
+                    # vertex conflict at time t
+                    if pos_t in positions_t:
+                        return {"time1": t, "time2": t, "a1": positions_t[pos_t], "a2": i, "pos": pos_t}
+                    positions_t[pos_t] = i
+
+                if s_t1 is not None:
+                    pos_t1: Tuple[int, int] = (s_t1.x, s_t1.y)
+                    # multiple agents at same cell at time t+1 (vertex conflict at t+1)
+                    if pos_t1 in positions_t1:
+                        return {"time1": t + 1, "time2": t + 1, "a1": positions_t1[pos_t1], "a2": i, "pos": pos_t1}
+                    positions_t1[pos_t1] = i
+
+            # now check for "just-vacated" conflicts: cell occupied at t by agent A and at t+1 by agent B
+            for pos, a_at_t in positions_t.items():
+                if pos in positions_t1:
+                    a_at_t1 = positions_t1[pos]
+                    if a_at_t != a_at_t1:
+                        return {"time1": t, "time2": t + 1, "a1": a_at_t, "a2": a_at_t1, "pos": pos}
+
         return None
 
     def compute_cost(self, paths: List[List[PathPlannerState]]) -> int:
@@ -97,6 +128,9 @@ class Planner_CBS:
         for c in constraints:
             if c.agent == agent:
                 dynamic_occupancy[c.t, c.x, c.y] = True
+                # note: do not automatically block c.t+1 here — constraints are per-agent and
+                # the CBS branching creates explicit constraints for the other agent at t+1 when
+                # a "just-vacated" conflict is detected. Blocking c.t+1 here would over-constrain.
         return dynamic_occupancy
 
     def astar_launcher(
@@ -111,6 +145,34 @@ class Planner_CBS:
         return self.astar_planner.astar(
             start=start, goal=goal, dynamic_occupancy=dynamic_occupancy
         )
+
+    def extract_conflict_free_subset(self, paths: List[List[PathPlannerState]]) -> List[List[PathPlannerState]]:
+        """Return a full-length list of paths where some agents keep their original path
+        and others are replaced by an idle single-state path (stay at start) so the
+        returned list is pairwise conflict-free.
+
+        Strategy: start with everyone idle, then try to add agents in increasing path length
+        (prefer shorter paths) — only keep an agent's full path if it doesn't introduce a
+        conflict with paths already accepted.
+        """
+        if not paths:
+            return []
+        # Start with everyone idle (single-state at their start)
+        final_paths: List[List[PathPlannerState]] = [[p[0]] for p in paths]
+        # Order agents by increasing full-path length (prefer adding short routes first)
+        agent_order = sorted(range(len(paths)), key=lambda i: len(paths[i]))
+        accepted_agents: List[int] = []
+        for ai in agent_order:
+            # try to set ai to its full path
+            backup = final_paths[ai]
+            final_paths[ai] = paths[ai]
+            if self.detect_conflict(final_paths) is None:
+                accepted_agents.append(ai)
+            else:
+                # revert to idle
+                final_paths[ai] = backup
+        print(f"\t\tCBS [TIMEOUT] returning {len(accepted_agents)}/{len(paths)} conflict-free routes for agents {accepted_agents}")
+        return final_paths
 
     def plan_cbs(
         self, starts: List[Tuple[int, int, int]], goals: List[Tuple[int, int]]
@@ -134,7 +196,10 @@ class Planner_CBS:
             # ABORT CONDITION: TIMEOUT
             if nodes_expanded > self.cbs_params["max_iterations"]:
                 print("\t\t CBS [TIMEOUT]")
-                return None
+                # instead of giving up completely, return a maximal conflict-free subset of the
+                # last node's paths (prefer shorter paths) so some agents can keep running
+                subset = self.extract_conflict_free_subset(node.paths)
+                return subset if subset else None
             # Detect conflicts
             conflict = self.detect_conflict(node.paths)
             # Determine valid set of paths
@@ -145,7 +210,8 @@ class Planner_CBS:
                 child: CBS_Node = CBS_Node()
                 child.constraints = list(node.constraints)
                 x, y = conflict["pos"]
-                t: int = conflict["time"]
+                # use per-agent time (allows detecting and constraining t and t+1 differently)
+                t: int = conflict["time1"] if agent == conflict["a1"] else conflict["time2"]
                 child.constraints.append(CBS_Constraint(agent, x, y, t))
                 child.paths = list(node.paths)
                 start_state: PathPlannerState = child.paths[agent][0]
