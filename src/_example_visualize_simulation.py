@@ -21,7 +21,6 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
 )
 
-
 ###############################################################################
 ###### PARAMETERS #############################################################
 ###############################################################################
@@ -50,6 +49,7 @@ simulation_settings = {
 ###### MAIN ###################################################################
 ###############################################################################
 environment = Environment(settings=simulation_settings)
+
 # spawn initial agents
 for n in range(0, 10):  # int(N_AGENTS/2)):
     environment.spawn_agent()

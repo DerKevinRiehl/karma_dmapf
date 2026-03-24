@@ -1,9 +1,9 @@
-src/figs/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
+.DS_Store
 
 # C extensions
 *.so
@@ -212,4 +212,6 @@ __marimo__/
 # Result directories
 figs/
 results/
+src/figs/*
+src/results/*
 

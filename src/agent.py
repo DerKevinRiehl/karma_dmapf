@@ -1,3 +1,13 @@
+from __future__ import annotations
+from typing import List, Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from task import Task
+    from environment import Environment
+    from geometry import Grid
+    from planner_path_astar import PathPlannerState
+
+
 import numpy as np
 from planner_path_astar import AStarPathPlanner
 from constants import (
@@ -17,36 +27,41 @@ from geometry import GridTools
 
 
 class Agent:
-    def __init__(self, agent_id, environment):
-        self.id = agent_id
-        self.environment = environment
-        self.grid = self.environment.grid
-        self.current_position = self.grid.get_random_empty_square()
-        self.current_orientation = np.random.choice(AGENT_ORIENTATIONS)
-        self.assigned_task = None
-        self.status = AGENT_STATUS_IDLE
-        self.route = []
-        self.target_position = []
+    def __init__(self, agent_id: int, environment: "Environment"):
+        self.id: int = agent_id
+        self.environment: "Environment" = environment
+        self.grid: "Grid" = self.environment.grid
+
+        pos = self.grid.get_random_empty_square()
+        if pos is None:
+            raise ValueError("No empty square available for agent spawning.")
+
+        self.current_position: List[int] = pos
+        self.current_orientation: int = np.random.choice(AGENT_ORIENTATIONS)
+        self.assigned_task: Optional["Task"] = None
+        self.status: int = AGENT_STATUS_IDLE
+        self.route: List[str] = []
+        self.target_position: List[int] = []
         self.grid.occupy(self.current_position)
-        self.path_planner = AStarPathPlanner(
+        self.path_planner: AStarPathPlanner = AStarPathPlanner(
             static_occupancy_grid=self.environment.static_grid.occupancy_grid,
             astar_params=self.environment.settings["params_astar"],
         )
-        self.karma_balance = 0
+        self.karma_balance: int = 0
 
-    def is_idle(self):
+    def is_idle(self) -> bool:
         return self.assigned_task is None
 
-    def is_available_soon(self):
+    def is_available_soon(self) -> bool:
         return self.status == AGENT_STATUS_CARRY
 
-    def release_task(self):
+    def release_task(self) -> None:
         self.assigned_task = None
         self.status = AGENT_STATUS_IDLE
         self.target_position = []
         self.route = []
 
-    def assign_task(self, task):
+    def assign_task(self, task: "Task") -> None:
         self.assigned_task = task
         self.target_position = task.from_position
         if self.current_position == self.target_position:
@@ -54,18 +69,29 @@ class Agent:
         else:
             self.status = AGENT_STATUS_PICKUP
 
-    def update_target_position(self):
+    def update_target_position(self) -> None:
         # determine target
         if self.status == AGENT_STATUS_PICKUP:
-            self.target_position = self.assigned_task.from_position
+            if self.assigned_task:
+                self.target_position = self.assigned_task.from_position
+            else:
+                raise ValueError("Agent in PICKUP status without assigned task.")
+
         elif self.status == AGENT_STATUS_CARRY:
-            self.target_position = self.assigned_task.to_position
+            if self.assigned_task:
+                self.target_position = self.assigned_task.to_position
+            else:
+                raise ValueError("Agent in CARRY status without assigned task.")
+
         # update status in case hit
         if self.current_position == self.target_position:
             self.status = AGENT_STATUS_CARRY
-            self.target_position = self.assigned_task.to_position
+            if self.assigned_task:
+                self.target_position = self.assigned_task.to_position
+            else:
+                raise ValueError("Agent in CARRY status without assigned task.")
 
-    def execute_route(self):
+    def execute_route(self) -> None:
         if len(self.route) > 0:
             task = self.route[0]
             self.route = self.route[1:]
@@ -84,10 +110,12 @@ class Agent:
             if task == "T":
                 pass
 
-            if self.status == AGENT_STATUS_CARRY:
+            if self.status == AGENT_STATUS_CARRY and self.assigned_task:
                 self.assigned_task.current_position = self.current_position
+            elif self.status == AGENT_STATUS_CARRY and not self.assigned_task:
+                raise ValueError("Agent in CARRY status without assigned task.")
 
-    def _move_north(self):
+    def _move_north(self) -> None:
         if (
             self.current_position[1] < self.grid.grid_size - 1
             and self.current_orientation == AGENT_ORIENTATION_NORTH
@@ -96,7 +124,7 @@ class Agent:
             self.current_position[1] += 1
             self.grid.occupy(self.current_position)
 
-    def _move_east(self):
+    def _move_east(self) -> None:
         if (
             self.current_position[0] < self.grid.grid_size - 1
             and self.current_orientation == AGENT_ORIENTATION_EAST
@@ -105,7 +133,7 @@ class Agent:
             self.current_position[0] += 1
             self.grid.occupy(self.current_position)
 
-    def _move_south(self):
+    def _move_south(self) -> None:
         if (
             self.current_position[1] > 0
             and self.current_orientation == AGENT_ORIENTATION_SOUTH
@@ -114,7 +142,7 @@ class Agent:
             self.current_position[1] -= 1
             self.grid.occupy(self.current_position)
 
-    def _move_west(self):
+    def _move_west(self) -> None:
         if (
             self.current_position[0] > 0
             and self.current_orientation == AGENT_ORIENTATION_WEST
@@ -123,17 +151,22 @@ class Agent:
             self.current_position[0] -= 1
             self.grid.occupy(self.current_position)
 
-    def _rotate_clockwise(self):
+    def _rotate_clockwise(self) -> None:
         self.current_orientation += 1
         if self.current_orientation > AGENT_ORIENTATION_WEST:
             self.current_orientation = AGENT_ORIENTATION_NORTH
 
-    def _rotate_counter_clockwise(self):
+    def _rotate_counter_clockwise(self) -> None:
         self.current_orientation -= 1
         if self.current_orientation < AGENT_ORIENTATION_NORTH:
             self.current_orientation = AGENT_ORIENTATION_WEST
 
-    def _determine_intersection_free_path(self, dynamic_occupancy_grid):
+    def _determine_intersection_free_path(
+        self, dynamic_occupancy_grid: np.ndarray
+    ) -> Optional[List["PathPlannerState"]]:
+        if not self.target_position:
+            return None
+
         path = self.path_planner.astar(
             start=(
                 self.current_position[0],
@@ -145,10 +178,13 @@ class Agent:
         )
         return path
 
-    def _determine_idle_parking_path(self, dynamic_occupancy_grid):
+    def _determine_idle_parking_path(
+        self, dynamic_occupancy_grid: np.ndarray
+    ) -> Optional[List["PathPlannerState"]]:
         x0, y0 = self.current_position
+
         # determine empty cells for idling nearby
-        target_candidates = []
+        target_candidates: List[List[int]] = []
         for dx in range(
             -IDLING_NEIGHBORHOOD_SEARCH_RANGE, IDLING_NEIGHBORHOOD_SEARCH_RANGE + 1
         ):
@@ -158,21 +194,26 @@ class Agent:
                 # skip the current cell itself
                 if dx == 0 and dy == 0:
                     continue
+
                 # explore probe
                 probe_pos_x = x0 + dx
                 probe_pos_y = y0 + dy
+
                 # grid bounds check
                 if probe_pos_x < 0 or probe_pos_y < 0:
                     continue
+
                 if (
                     probe_pos_x >= dynamic_occupancy_grid.shape[1]
                     or probe_pos_y >= dynamic_occupancy_grid.shape[2]
                 ):
                     continue
+
                 # cell must be free at all times in the horizon
                 # dynamic_occupancy_grid[:, x, y] is a 1D boolean array over time
                 if not dynamic_occupancy_grid[:, probe_pos_x, probe_pos_y].any():
                     target_candidates.append([probe_pos_x, probe_pos_y])
+
         # sort them closest to origin (self.current_position)
         target_candidates.sort(
             key=lambda p: (p[0] - x0) ** 2 + (p[1] - y0) ** 2
@@ -188,11 +229,12 @@ class Agent:
                 goal=(target_candidate[0], target_candidate[1]),
                 dynamic_occupancy=dynamic_occupancy_grid,
             )
-            if not path is None:
+            if path is not None:
                 return path
+
         return None
 
-    def plan_route_decentralized_respectful(self):
+    def plan_route_decentralized_respectful(self) -> None:
         # determine dynamic_occupancy_grid given all already planned routes
         dynamic_occupancy_grid = GridTools.create_dynamic_occupancy_grid(
             environment=self.environment,
@@ -204,11 +246,14 @@ class Agent:
         path = self._determine_intersection_free_path(dynamic_occupancy_grid)
         if path is not None:
             route = self.path_planner.convert_path_to_route(path)
-            # print("\trouteadded for ", agent.id, route)
-            self.route = route
+            if route:
+                self.route = route
 
-    def determine_cost_to_change(self, to_avoid_path):
+    def determine_cost_to_change(
+        self, to_avoid_path: List["PathPlannerState"]
+    ) -> Tuple[int, Optional[List["PathPlannerState"]]]:
         current_cost = len(self.route)
+
         # determine dynamic_occupancy_grid given all already planned routes
         dynamic_occupancy_grid = GridTools.create_dynamic_occupancy_grid(
             environment=self.environment,
@@ -216,11 +261,13 @@ class Agent:
             agent_list=self.environment.agents,
             tabu_agent=self,
         )
+
         # add to_avoid_path to dynamic_occupancy grid
         for state in to_avoid_path:
             dynamic_occupancy_grid[state.t][state.x][state.y] = True
 
         # if you have a target
+        changed_path: Optional[List["PathPlannerState"]] = None
         if len(self.target_position) > 0:
             # determine possible, intersection free path
             changed_path = self._determine_intersection_free_path(
@@ -228,14 +275,15 @@ class Agent:
             )
             if changed_path is not None:
                 changed_route = self.path_planner.convert_path_to_route(changed_path)
-                changed_cost = len(changed_route)
+                changed_cost = len(changed_route if changed_route else [])
                 return (changed_cost - current_cost), changed_path
         else:
             # determine if there is any free position nearby to idle parking
             changed_path = self._determine_idle_parking_path(dynamic_occupancy_grid)
             return -1, changed_path
+
         return 1000, changed_path
 
-    def change_path_to_satisfy(self, change_to_path):
+    def change_path_to_satisfy(self, change_to_path: List["PathPlannerState"]) -> None:
         alternative_route = self.path_planner.convert_path_to_route(change_to_path)
-        self.route = alternative_route
+        self.route = alternative_route if alternative_route else []
