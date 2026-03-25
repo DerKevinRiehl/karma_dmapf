@@ -157,40 +157,40 @@ print("=====================================================")
 =====================================================
 Experiment Results for algorithm DECENTRALIZED_RESPECT over 10 experiments
 =====================================================
-A* calls:        mean = 71275.800 	 std = 1886.910
-Completed tasks: mean = 473.300 	 std = 5.515
-Total cost:      mean = 9281.400 	 std = 37.479
-Avg cost:        mean = 19.613 	 std = 0.269
-Distribution:    mean = 5.756 	 std = 0.112
+A* calls:        mean = 77801.400 	 std = 3732.673
+Completed tasks: mean = 496.400 	 std = 6.312
+Total cost:      mean = 9231.800 	 std = 18.686
+Avg cost:        mean = 18.601 	 std = 0.266
+Distribution:    mean = 5.775 	 std = 0.168
 =====================================================
 
 =====================================================
 Experiment Results for algorithm DECENTRALIZED_NEGOTIATE_EGOISTIC over 10 experiments
 =====================================================
-A* calls:        mean = 134746.800 	 std = 6711.572
-Completed tasks: mean = 486.000 	 std = 4.858
-Total cost:      mean = 9263.400 	 std = 26.953
-Avg cost:        mean = 19.062 	 std = 0.199
-Distribution:    mean = 5.454 	 std = 0.137
+A* calls:        mean = 187876.300 	 std = 14002.736
+Completed tasks: mean = 507.200 	 std = 6.954
+Total cost:      mean = 9219.200 	 std = 12.929
+Avg cost:        mean = 18.180 	 std = 0.248
+Distribution:    mean = 5.593 	 std = 0.159
 =====================================================
 
 =====================================================
 Experiment Results for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
 =====================================================
-A* calls:        mean = 136193.900 	 std = 7432.091
-Completed tasks: mean = 484.400 	 std = 4.543
-Total cost:      mean = 9248.600 	 std = 29.971
-Avg cost:        mean = 19.095 	 std = 0.222
-Distribution:    mean = 5.649 	 std = 0.209
+A* calls:        mean = 168357.700 	 std = 10569.894
+Completed tasks: mean = 507.700 	 std = 7.669
+Total cost:      mean = 9213.300 	 std = 16.710
+Avg cost:        mean = 18.151 	 std = 0.273
+Distribution:    mean = 5.612 	 std = 0.174
 =====================================================
 
 =====================================================
 Experiment Results for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
-A* calls:        mean = 136949.600 	 std = 11524.341
-Completed tasks: mean = 485.900 	 std = 5.430
-Total cost:      mean = 9253.500 	 std = 24.258
-Avg cost:        mean = 19.047 	 std = 0.226
-Distribution:    mean = 5.584 	 std = 0.231
+A* calls:        mean = 181295.800 	 std = 15864.907
+Completed tasks: mean = 503.900 	 std = 7.595
+Total cost:      mean = 9226.900 	 std = 33.533
+Avg cost:        mean = 18.315 	 std = 0.301
+Distribution:    mean = 5.606 	 std = 0.245
 =====================================================
 """

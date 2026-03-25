@@ -198,9 +198,12 @@ class Environment:
                 for idx, agent in enumerate(planning_relevant_agents):
                     agent.route = routes[idx]
             else:  # Fallback: DECENTRALIZED_ALTRUISTIC
-                self.handle_agents_route_planning_decentralized_negotiate(
-                    NegotiationStrategy.negotiate_altruistic
+                raise Exception(
+                    "Centralized planning failed to find a solution, consider adjusting parameters or using a different controller."
                 )
+                # self.handle_agents_route_planning_decentralized_negotiate(
+                #     NegotiationStrategy.negotiate_altruistic
+                # )
 
     def handle_agents_route_planning_decentralized_respect(self) -> None:
         """
@@ -264,14 +267,6 @@ class Environment:
                         )
                     break
 
-                # rebuild full reservation table each iteration so we always check conflicts against the
-                # latest routes other agents may have switched to during negotiation
-                reservation_table_complete = GridTools.create_3D_reservation_grid(
-                    environment=self,
-                    time_horizon=self.settings["params_astar"]["planning_horizon"],
-                    agent_list=self.agents,
-                    tabu_agent=agent,
-                )
                 if self.settings["debug_statements"]:
                     print(
                         "\ttrying to finish planning for agent",
@@ -305,6 +300,16 @@ class Environment:
                 if current_path is None:
                     planning_finished = True
                     break
+
+                # rebuild full reservation table each iteration so we always check conflicts against the
+                # latest routes other agents may have switched to during negotiation
+                reservation_table_complete = GridTools.create_3D_reservation_grid(
+                    environment=self,
+                    time_horizon=self.settings["params_astar"]["planning_horizon"],
+                    agent_list=self.agents,
+                    tabu_agent=agent,
+                    consider_vacated_positions=True,  # take into consideration potential location swapping that would be allowed otherwise (not handled by this conflict detection)
+                )
 
                 # determine conflicts with current plan
                 conflicts = GridTools.detect_conflicts(

@@ -134,6 +134,7 @@ class GridTools:
             t: int = state.t
             if t >= reservation_table.shape[0]:
                 break
+
             x: int = state.x
             y: int = state.y
             occupying_agent: int = int(reservation_table[t][x][y])

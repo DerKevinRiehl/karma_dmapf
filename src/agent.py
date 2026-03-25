@@ -245,6 +245,7 @@ class Agent:
             agent_list=self.environment.agents,
             tabu_agent=self,
         )
+
         # determine possible, intersection free path
         path = self._determine_intersection_free_path(dynamic_occupancy_grid)
         if path is not None:

@@ -92,6 +92,7 @@ class Planner_CBS:
 
                 if s_t is not None:
                     pos_t: Tuple[int, int] = (s_t.x, s_t.y)
+
                     # vertex conflict at time t
                     if pos_t in positions_t:
                         return {
@@ -105,6 +106,7 @@ class Planner_CBS:
 
                 if s_t1 is not None:
                     pos_t1: Tuple[int, int] = (s_t1.x, s_t1.y)
+
                     # multiple agents at same cell at time t+1 (vertex conflict at t+1)
                     if pos_t1 in positions_t1:
                         return {
@@ -145,12 +147,14 @@ class Planner_CBS:
             ),
             dtype=bool,
         )
+
         for c in constraints:
             if c.agent == agent:
                 dynamic_occupancy[c.t, c.x, c.y] = True
                 # note: do not automatically block c.t+1 here — constraints are per-agent and
                 # the CBS branching creates explicit constraints for the other agent at t+1 when
                 # a "just-vacated" conflict is detected. Blocking c.t+1 here would over-constrain.
+
         return dynamic_occupancy
 
     def astar_launcher(
@@ -170,6 +174,7 @@ class Planner_CBS:
         self, starts: List[Tuple[int, int, int]], goals: List[Tuple[int, int]]
     ) -> Optional[List[List[PathPlannerState]]]:
         root: CBS_Node = CBS_Node()
+
         # initial paths
         for i, start in enumerate(starts):
             path = self.astar_launcher(start, goals[i], i, root.constraints)
@@ -177,28 +182,35 @@ class Planner_CBS:
                 return None
             root.paths.append(path)
         root.cost = self.compute_cost(root.paths)
+
         # branch and search, avoid conflicts, minize total costs
         open_list: List[Tuple[int, int, CBS_Node]] = []
         counter = itertools.count()
         heapq.heappush(open_list, (root.cost, next(counter), root))
         nodes_expanded: int = 0
+
         while open_list:
             _, _, node = heapq.heappop(open_list)
             nodes_expanded += 1
+
             # ABORT CONDITION: TIMEOUT
             if nodes_expanded > self.cbs_params["max_iterations"]:
                 print("\t\t CBS [TIMEOUT]")
                 return None
+
             # Detect conflicts
             conflict = self.detect_conflict(node.paths)
+
             # Determine valid set of paths
             if conflict is None:
                 return node.paths
+
             # Explore other paths for conflicts
             for agent in [conflict["a1"], conflict["a2"]]:
                 child: CBS_Node = CBS_Node()
                 child.constraints = list(node.constraints)
                 x, y = conflict["pos"]
+
                 # use per-agent time (allows detecting and constraining t and t+1 differently)
                 t: int = (
                     conflict["time1"] if agent == conflict["a1"] else conflict["time2"]
