@@ -64,15 +64,16 @@ class Agent:
         self.target_position = []
         self.route = []
 
-    def assign_task(self, task: "Task") -> None:
+    def assign_task(self, task: "Task", time: int) -> None:
         self.assigned_task = task
         self.target_position = task.from_position
-        if self.current_position == self.target_position:
+        if self.current_position == task.from_position:
             self.status = AGENT_STATUS_CARRY
+            self.assigned_task.pickup_time = time
         else:
             self.status = AGENT_STATUS_PICKUP
 
-    def update_target_position(self) -> None:
+    def update_target_position(self, time: int) -> None:
         # determine target
         if self.status == AGENT_STATUS_PICKUP:
             if self.assigned_task:
@@ -91,6 +92,10 @@ class Agent:
             self.status = AGENT_STATUS_CARRY
             if self.assigned_task:
                 self.target_position = self.assigned_task.to_position
+
+                # if the task was only picked up now, set pickup time
+                if self.assigned_task.pickup_time is None:
+                    self.assigned_task.pickup_time = time
             else:
                 raise ValueError("Agent in CARRY status without assigned task.")
 

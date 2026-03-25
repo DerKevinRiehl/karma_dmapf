@@ -78,7 +78,7 @@ class Environment:
 
             # only assign if agent is idle (otherwise it is done in later iteration)
             if agent.is_idle():
-                agent.assign_task(task)
+                agent.assign_task(task=task, time=self.time)
                 task.assigned_agent = agent
 
     def close_finished_tasks(self) -> bool:
@@ -95,6 +95,7 @@ class Environment:
             self.tasks.remove(task)
             task.completed_time = self.time
             self.completed_tasks.append(task)
+
         return len(finished_tasks) > 0
 
     def handle_agents(self) -> None:
@@ -131,7 +132,7 @@ class Environment:
         for agent in self.agents:
             agent.execute_route()
             if len(agent.route) == 0 and not agent.is_idle():
-                agent.update_target_position()
+                agent.update_target_position(self.time)
 
     def print_debug_log(self) -> None:
         if self.settings["debug_statements"]:
