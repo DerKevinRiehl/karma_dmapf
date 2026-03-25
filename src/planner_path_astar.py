@@ -44,6 +44,7 @@ class AStarPathPlanner:
         start: Tuple[int, int, int],
         goal: Tuple[int, int],
         dynamic_occupancy: Optional[NDArray[np.bool_]] = None,
+        ignore_counter: bool = False,
     ) -> Optional[List[PathPlannerState]]:
         """
         This is the implementation of a astar algorithm for a robot that needs
@@ -54,6 +55,7 @@ class AStarPathPlanner:
         goal: (x, y)
         dynamic_occupancy: 3D occupancy grid [time, x, y]
         max_time_horizon: optional maximum time to consider
+        ignore_counter: if True, do not increment the AStarPathPlanner.COUNTER (used for shortest possible path calculation for evaluation only)
         """
         open_list: List[Tuple[int, PathPlannerState, List[PathPlannerState]]] = []
         visited: Set[Tuple[int, int, int, int]] = set()
@@ -63,7 +65,9 @@ class AStarPathPlanner:
         )
         heapq.heappush(open_list, (0, start_state, []))
         while open_list:
-            AStarPathPlanner.COUNTER += 1
+            if not ignore_counter:
+                AStarPathPlanner.COUNTER += 1
+
             steps += 1
             # ABORT CONDITION: TIMEOUT
             if steps > self.astar_params["max_iterations"]:

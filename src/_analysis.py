@@ -133,6 +133,10 @@ for grid_size in grid_sizes:
             n_average_service_time_list = []
             n_std_service_time_list = []
 
+            # Service Time Increase Percentage metrics ((service - min) / min)
+            n_average_service_increase_list = []
+            n_std_service_increase_list = []
+
             for random_seed in random_seeds:
                 simulation_settings["random_seed"] = random_seed
                 n_astar_calls = 0
@@ -198,10 +202,27 @@ for grid_size in grid_sizes:
                     if task.completed_time is not None and task.pickup_time is not None
                 ]
 
+                # 3. Minimum Task Time
+                task_min_times = [
+                    task.minimum_task_time
+                    for task in environment.completed_tasks
+                    if task.minimum_task_time != 0
+                ]
+
+                # 4. Service Time Increase Percentage
+                # (service_time - min_time) / min_time
+                task_service_increase_percentages = []
+                for s_time, m_time in zip(task_service_times, task_min_times):
+                    task_service_increase_percentages.append(
+                        (s_time - m_time) / m_time * 100
+                    )
+
                 # if the number of tracked tasks is different, raise an error
-                if len(task_total_times) != len(task_service_times):
+                if len(task_total_times) != len(task_service_times) or len(
+                    task_total_times
+                ) != len(task_service_increase_percentages):
                     raise ValueError(
-                        "Number of completed tasks with total time does not match number of completed tasks with service time."
+                        "Number of completed tasks with total time does not match number of completed tasks with service time or service time increase percentages."
                     )
 
                 # Task Time (incl. Reallocation) stats
@@ -213,6 +234,10 @@ for grid_size in grid_sizes:
                 n_total_service_time = np.sum(task_service_times)
                 n_average_service_time = np.mean(task_service_times)
                 n_std_service_time = np.std(task_service_times)
+
+                # Service Time Increase stats
+                n_average_service_increase = np.mean(task_service_increase_percentages)
+                n_std_service_increase = np.std(task_service_increase_percentages)
 
                 # store metrics
                 n_completed_tasks = len(task_total_times)
@@ -226,6 +251,9 @@ for grid_size in grid_sizes:
                 n_total_service_time_list.append(n_total_service_time)
                 n_average_service_time_list.append(n_average_service_time)
                 n_std_service_time_list.append(n_std_service_time)
+
+                n_average_service_increase_list.append(n_average_service_increase)
+                n_std_service_increase_list.append(n_std_service_increase)
 
             def summarize(x):
                 x = np.array(x, dtype=float)
@@ -244,6 +272,10 @@ for grid_size in grid_sizes:
             avg_avg_srv, std_avg_srv = summarize(n_average_service_time_list)
             avg_std_srv, std_std_srv = summarize(n_std_service_time_list)
 
+            avg_avg_increase, std_avg_increase = summarize(
+                n_average_service_increase_list
+            )
+
             metrics = {
                 "A* Calls": (avg_astar, std_astar),
                 "Completed Tasks": (avg_completed, std_completed),
@@ -256,6 +288,7 @@ for grid_size in grid_sizes:
                 "Total Service Time": (avg_total_srv, std_total_srv),
                 "Avg Service Time": (avg_avg_srv, std_avg_srv),
                 "Std Service Time": (avg_std_srv, std_std_srv),
+                "Avg Service Time Increase (%)": (avg_avg_increase, std_avg_increase),
             }
             results_summary[grid_size][controller][n_agent] = metrics
 
@@ -312,7 +345,12 @@ for grid_size in grid_sizes:
                     avg_std_srv, std_std_srv
                 )
             )
-            print("=====================================================")
+            print(
+                "Avg Service Time Increase (%):           mean = {:.3f}% \t std = {:.3f}%".format(
+                    avg_avg_increase, std_avg_increase
+                )
+            )
+            print("=====================================================\n")
 
     # Print tables for this grid_size
     agents = n_agents_map[grid_size]
@@ -326,6 +364,7 @@ for grid_size in grid_sizes:
         "Total Service Time",
         "Avg Service Time",
         "Std Service Time",
+        "Avg Service Time Increase (%)",
     ]:
         metric_data = {}
         for algo in controllers_run:
@@ -350,7 +389,9 @@ Std Task Time (incl. Reallocation):      mean = 2.852 	 std = 0.176
 Total Service Time:                      mean = 403.300 	 std = 11.091
 Avg Service Time:                        mean = 4.739 	 std = 0.209
 Std Service Time:                        mean = 1.933 	 std = 0.105
+Avg Service Time Increase (%):           mean = 0.000% 	 std = 0.000%
 =====================================================
+
 =====================================================
 Experiment Results [2 agents] [5 grid-size] for algorithm DECENTRALIZED_RESPECT over 10 experiments
 =====================================================
@@ -362,7 +403,9 @@ Std Task Time (incl. Reallocation):      mean = 2.814 	 std = 0.122
 Total Service Time:                      mean = 835.200 	 std = 21.679
 Avg Service Time:                        mean = 5.020 	 std = 0.207
 Std Service Time:                        mean = 2.021 	 std = 0.118
+Avg Service Time Increase (%):           mean = 3.490% 	 std = 1.201%
 =====================================================
+
 =====================================================
 Experiment Results [3 agents] [5 grid-size] for algorithm DECENTRALIZED_RESPECT over 10 experiments
 =====================================================
@@ -374,7 +417,9 @@ Std Task Time (incl. Reallocation):      mean = 3.048 	 std = 0.078
 Total Service Time:                      mean = 1288.300 	 std = 22.791
 Avg Service Time:                        mean = 5.201 	 std = 0.075
 Std Service Time:                        mean = 2.101 	 std = 0.106
+Avg Service Time Increase (%):           mean = 7.460% 	 std = 1.520%
 =====================================================
+
 =====================================================
 Experiment Results [4 agents] [5 grid-size] for algorithm DECENTRALIZED_RESPECT over 10 experiments
 =====================================================
@@ -386,7 +431,9 @@ Std Task Time (incl. Reallocation):      mean = 3.214 	 std = 0.113
 Total Service Time:                      mean = 1742.100 	 std = 22.762
 Avg Service Time:                        mean = 5.355 	 std = 0.113
 Std Service Time:                        mean = 2.261 	 std = 0.085
+Avg Service Time Increase (%):           mean = 11.757% 	 std = 0.831%
 =====================================================
+
 =====================================================
 Experiment Results [5 agents] [5 grid-size] for algorithm DECENTRALIZED_RESPECT over 10 experiments
 =====================================================
@@ -398,7 +445,9 @@ Std Task Time (incl. Reallocation):      mean = 3.370 	 std = 0.080
 Total Service Time:                      mean = 2223.300 	 std = 26.207
 Avg Service Time:                        mean = 5.532 	 std = 0.070
 Std Service Time:                        mean = 2.383 	 std = 0.055
+Avg Service Time Increase (%):           mean = 15.360% 	 std = 0.673%
 =====================================================
+
 =====================================================
 Experiment Results [6 agents] [5 grid-size] for algorithm DECENTRALIZED_RESPECT over 10 experiments
 =====================================================
@@ -410,7 +459,9 @@ Std Task Time (incl. Reallocation):      mean = 3.477 	 std = 0.118
 Total Service Time:                      mean = 2726.100 	 std = 31.156
 Avg Service Time:                        mean = 5.766 	 std = 0.109
 Std Service Time:                        mean = 2.550 	 std = 0.066
+Avg Service Time Increase (%):           mean = 21.120% 	 std = 1.187%
 =====================================================
+
 =====================================================
 Experiment Results [7 agents] [5 grid-size] for algorithm DECENTRALIZED_RESPECT over 10 experiments
 =====================================================
@@ -422,7 +473,9 @@ Std Task Time (incl. Reallocation):      mean = 3.729 	 std = 0.114
 Total Service Time:                      mean = 3260.800 	 std = 32.875
 Avg Service Time:                        mean = 6.057 	 std = 0.118
 Std Service Time:                        mean = 2.785 	 std = 0.095
+Avg Service Time Increase (%):           mean = 26.554% 	 std = 1.656%
 =====================================================
+
 =====================================================
 Experiment Results [8 agents] [5 grid-size] for algorithm DECENTRALIZED_RESPECT over 10 experiments
 =====================================================
@@ -434,7 +487,9 @@ Std Task Time (incl. Reallocation):      mean = 3.942 	 std = 0.113
 Total Service Time:                      mean = 3762.700 	 std = 54.325
 Avg Service Time:                        mean = 6.230 	 std = 0.124
 Std Service Time:                        mean = 2.971 	 std = 0.076
+Avg Service Time Increase (%):           mean = 31.508% 	 std = 1.956%
 =====================================================
+
 =====================================================
 Experiment Results [9 agents] [5 grid-size] for algorithm DECENTRALIZED_RESPECT over 10 experiments
 =====================================================
@@ -446,7 +501,9 @@ Std Task Time (incl. Reallocation):      mean = 4.264 	 std = 0.097
 Total Service Time:                      mean = 4340.700 	 std = 35.288
 Avg Service Time:                        mean = 6.632 	 std = 0.111
 Std Service Time:                        mean = 3.200 	 std = 0.090
+Avg Service Time Increase (%):           mean = 37.801% 	 std = 1.224%
 =====================================================
+
 =====================================================
 Experiment Results [10 agents] [5 grid-size] for algorithm DECENTRALIZED_RESPECT over 10 experiments
 =====================================================
@@ -458,7 +515,9 @@ Std Task Time (incl. Reallocation):      mean = 4.456 	 std = 0.099
 Total Service Time:                      mean = 4919.400 	 std = 28.524
 Avg Service Time:                        mean = 7.011 	 std = 0.081
 Std Service Time:                        mean = 3.465 	 std = 0.059
+Avg Service Time Increase (%):           mean = 44.596% 	 std = 1.424%
 =====================================================
+
 =====================================================
 Experiment Results [1 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_EGOISTIC over 10 experiments
 =====================================================
@@ -470,7 +529,9 @@ Std Task Time (incl. Reallocation):      mean = 2.852 	 std = 0.176
 Total Service Time:                      mean = 403.300 	 std = 11.091
 Avg Service Time:                        mean = 4.739 	 std = 0.209
 Std Service Time:                        mean = 1.933 	 std = 0.105
+Avg Service Time Increase (%):           mean = 0.000% 	 std = 0.000%
 =====================================================
+
 =====================================================
 Experiment Results [2 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_EGOISTIC over 10 experiments
 =====================================================
@@ -482,7 +543,9 @@ Std Task Time (incl. Reallocation):      mean = 2.692 	 std = 0.151
 Total Service Time:                      mean = 836.000 	 std = 21.698
 Avg Service Time:                        mean = 4.959 	 std = 0.191
 Std Service Time:                        mean = 1.935 	 std = 0.074
+Avg Service Time Increase (%):           mean = 1.413% 	 std = 0.719%
 =====================================================
+
 =====================================================
 Experiment Results [3 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_EGOISTIC over 10 experiments
 =====================================================
@@ -494,7 +557,9 @@ Std Task Time (incl. Reallocation):      mean = 2.922 	 std = 0.115
 Total Service Time:                      mean = 1262.900 	 std = 14.124
 Avg Service Time:                        mean = 5.005 	 std = 0.089
 Std Service Time:                        mean = 2.004 	 std = 0.104
+Avg Service Time Increase (%):           mean = 3.214% 	 std = 0.638%
 =====================================================
+
 =====================================================
 Experiment Results [4 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_EGOISTIC over 10 experiments
 =====================================================
@@ -506,7 +571,9 @@ Std Task Time (incl. Reallocation):      mean = 2.928 	 std = 0.104
 Total Service Time:                      mean = 1700.500 	 std = 21.068
 Avg Service Time:                        mean = 4.998 	 std = 0.105
 Std Service Time:                        mean = 2.044 	 std = 0.098
+Avg Service Time Increase (%):           mean = 4.835% 	 std = 0.641%
 =====================================================
+
 =====================================================
 Experiment Results [5 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_EGOISTIC over 10 experiments
 =====================================================
@@ -518,7 +585,9 @@ Std Task Time (incl. Reallocation):      mean = 3.043 	 std = 0.088
 Total Service Time:                      mean = 2147.600 	 std = 24.650
 Avg Service Time:                        mean = 5.129 	 std = 0.099
 Std Service Time:                        mean = 2.072 	 std = 0.045
+Avg Service Time Increase (%):           mean = 6.981% 	 std = 0.862%
 =====================================================
+
 =====================================================
 Experiment Results [6 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_EGOISTIC over 10 experiments
 =====================================================
@@ -530,7 +599,9 @@ Std Task Time (incl. Reallocation):      mean = 3.098 	 std = 0.116
 Total Service Time:                      mean = 2596.900 	 std = 15.921
 Avg Service Time:                        mean = 5.202 	 std = 0.064
 Std Service Time:                        mean = 2.153 	 std = 0.048
+Avg Service Time Increase (%):           mean = 9.409% 	 std = 1.450%
 =====================================================
+
 =====================================================
 Experiment Results [7 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_EGOISTIC over 10 experiments
 =====================================================
@@ -542,7 +613,9 @@ Std Task Time (incl. Reallocation):      mean = 3.175 	 std = 0.086
 Total Service Time:                      mean = 3070.300 	 std = 23.808
 Avg Service Time:                        mean = 5.282 	 std = 0.077
 Std Service Time:                        mean = 2.266 	 std = 0.075
+Avg Service Time Increase (%):           mean = 12.046% 	 std = 0.811%
 =====================================================
+
 =====================================================
 Experiment Results [8 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_EGOISTIC over 10 experiments
 =====================================================
@@ -554,7 +627,9 @@ Std Task Time (incl. Reallocation):      mean = 3.274 	 std = 0.100
 Total Service Time:                      mean = 3540.400 	 std = 27.369
 Avg Service Time:                        mean = 5.394 	 std = 0.110
 Std Service Time:                        mean = 2.329 	 std = 0.069
+Avg Service Time Increase (%):           mean = 14.691% 	 std = 1.451%
 =====================================================
+
 =====================================================
 Experiment Results [9 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_EGOISTIC over 10 experiments
 =====================================================
@@ -566,7 +641,9 @@ Std Task Time (incl. Reallocation):      mean = 3.489 	 std = 0.063
 Total Service Time:                      mean = 4047.700 	 std = 37.092
 Avg Service Time:                        mean = 5.582 	 std = 0.088
 Std Service Time:                        mean = 2.474 	 std = 0.038
+Avg Service Time Increase (%):           mean = 17.664% 	 std = 1.231%
 =====================================================
+
 =====================================================
 Experiment Results [10 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_EGOISTIC over 10 experiments
 =====================================================
@@ -578,7 +655,9 @@ Std Task Time (incl. Reallocation):      mean = 3.625 	 std = 0.123
 Total Service Time:                      mean = 4450.600 	 std = 51.247
 Avg Service Time:                        mean = 5.679 	 std = 0.078
 Std Service Time:                        mean = 2.591 	 std = 0.067
+Avg Service Time Increase (%):           mean = 21.019% 	 std = 1.146%
 =====================================================
+
 =====================================================
 Experiment Results [1 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
 =====================================================
@@ -590,7 +669,9 @@ Std Task Time (incl. Reallocation):      mean = 2.852 	 std = 0.176
 Total Service Time:                      mean = 403.300 	 std = 11.091
 Avg Service Time:                        mean = 4.739 	 std = 0.209
 Std Service Time:                        mean = 1.933 	 std = 0.105
+Avg Service Time Increase (%):           mean = 0.000% 	 std = 0.000%
 =====================================================
+
 =====================================================
 Experiment Results [2 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
 =====================================================
@@ -602,7 +683,9 @@ Std Task Time (incl. Reallocation):      mean = 2.816 	 std = 0.189
 Total Service Time:                      mean = 820.200 	 std = 14.607
 Avg Service Time:                        mean = 4.804 	 std = 0.141
 Std Service Time:                        mean = 1.936 	 std = 0.148
+Avg Service Time Increase (%):           mean = 0.858% 	 std = 0.260%
 =====================================================
+
 =====================================================
 Experiment Results [3 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
 =====================================================
@@ -614,7 +697,9 @@ Std Task Time (incl. Reallocation):      mean = 2.843 	 std = 0.098
 Total Service Time:                      mean = 1253.900 	 std = 19.614
 Avg Service Time:                        mean = 4.894 	 std = 0.122
 Std Service Time:                        mean = 1.970 	 std = 0.072
+Avg Service Time Increase (%):           mean = 2.097% 	 std = 0.474%
 =====================================================
+
 =====================================================
 Experiment Results [4 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
 =====================================================
@@ -626,7 +711,9 @@ Std Task Time (incl. Reallocation):      mean = 2.898 	 std = 0.127
 Total Service Time:                      mean = 1695.100 	 std = 34.512
 Avg Service Time:                        mean = 4.956 	 std = 0.124
 Std Service Time:                        mean = 2.015 	 std = 0.082
+Avg Service Time Increase (%):           mean = 3.431% 	 std = 0.625%
 =====================================================
+
 =====================================================
 Experiment Results [5 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
 =====================================================
@@ -638,7 +725,9 @@ Std Task Time (incl. Reallocation):      mean = 2.970 	 std = 0.095
 Total Service Time:                      mean = 2164.300 	 std = 25.068
 Avg Service Time:                        mean = 5.089 	 std = 0.048
 Std Service Time:                        mean = 2.138 	 std = 0.055
+Avg Service Time Increase (%):           mean = 5.170% 	 std = 0.467%
 =====================================================
+
 =====================================================
 Experiment Results [6 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
 =====================================================
@@ -650,7 +739,9 @@ Std Task Time (incl. Reallocation):      mean = 3.037 	 std = 0.042
 Total Service Time:                      mean = 2629.000 	 std = 31.887
 Avg Service Time:                        mean = 5.156 	 std = 0.097
 Std Service Time:                        mean = 2.173 	 std = 0.047
+Avg Service Time Increase (%):           mean = 6.634% 	 std = 0.799%
 =====================================================
+
 =====================================================
 Experiment Results [7 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
 =====================================================
@@ -662,7 +753,9 @@ Std Task Time (incl. Reallocation):      mean = 3.118 	 std = 0.111
 Total Service Time:                      mean = 3074.700 	 std = 33.761
 Avg Service Time:                        mean = 5.197 	 std = 0.096
 Std Service Time:                        mean = 2.275 	 std = 0.056
+Avg Service Time Increase (%):           mean = 8.956% 	 std = 0.756%
 =====================================================
+
 =====================================================
 Experiment Results [8 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
 =====================================================
@@ -674,7 +767,9 @@ Std Task Time (incl. Reallocation):      mean = 3.297 	 std = 0.117
 Total Service Time:                      mean = 3563.700 	 std = 52.593
 Avg Service Time:                        mean = 5.326 	 std = 0.129
 Std Service Time:                        mean = 2.352 	 std = 0.084
+Avg Service Time Increase (%):           mean = 11.024% 	 std = 0.967%
 =====================================================
+
 =====================================================
 Experiment Results [9 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
 =====================================================
@@ -686,7 +781,9 @@ Std Task Time (incl. Reallocation):      mean = 3.391 	 std = 0.141
 Total Service Time:                      mean = 4026.900 	 std = 34.125
 Avg Service Time:                        mean = 5.419 	 std = 0.060
 Std Service Time:                        mean = 2.469 	 std = 0.069
+Avg Service Time Increase (%):           mean = 13.173% 	 std = 0.935%
 =====================================================
+
 =====================================================
 Experiment Results [10 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
 =====================================================
@@ -698,7 +795,9 @@ Std Task Time (incl. Reallocation):      mean = 3.467 	 std = 0.161
 Total Service Time:                      mean = 4478.700 	 std = 57.044
 Avg Service Time:                        mean = 5.549 	 std = 0.071
 Std Service Time:                        mean = 2.562 	 std = 0.107
+Avg Service Time Increase (%):           mean = 15.749% 	 std = 1.101%
 =====================================================
+
 =====================================================
 Experiment Results [1 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
@@ -710,7 +809,9 @@ Std Task Time (incl. Reallocation):      mean = 2.852 	 std = 0.176
 Total Service Time:                      mean = 403.300 	 std = 11.091
 Avg Service Time:                        mean = 4.739 	 std = 0.209
 Std Service Time:                        mean = 1.933 	 std = 0.105
+Avg Service Time Increase (%):           mean = 0.000% 	 std = 0.000%
 =====================================================
+
 =====================================================
 Experiment Results [2 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
@@ -722,7 +823,9 @@ Std Task Time (incl. Reallocation):      mean = 2.730 	 std = 0.141
 Total Service Time:                      mean = 825.500 	 std = 15.628
 Avg Service Time:                        mean = 4.921 	 std = 0.135
 Std Service Time:                        mean = 1.948 	 std = 0.085
+Avg Service Time Increase (%):           mean = 0.983% 	 std = 0.308%
 =====================================================
+
 =====================================================
 Experiment Results [3 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
@@ -734,7 +837,9 @@ Std Task Time (incl. Reallocation):      mean = 2.884 	 std = 0.128
 Total Service Time:                      mean = 1270.000 	 std = 22.755
 Avg Service Time:                        mean = 5.008 	 std = 0.155
 Std Service Time:                        mean = 1.993 	 std = 0.089
+Avg Service Time Increase (%):           mean = 2.521% 	 std = 0.644%
 =====================================================
+
 =====================================================
 Experiment Results [4 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
@@ -746,7 +851,9 @@ Std Task Time (incl. Reallocation):      mean = 2.919 	 std = 0.130
 Total Service Time:                      mean = 1702.500 	 std = 14.361
 Avg Service Time:                        mean = 4.985 	 std = 0.078
 Std Service Time:                        mean = 2.017 	 std = 0.061
+Avg Service Time Increase (%):           mean = 4.116% 	 std = 0.599%
 =====================================================
+
 =====================================================
 Experiment Results [5 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
@@ -758,7 +865,9 @@ Std Task Time (incl. Reallocation):      mean = 3.003 	 std = 0.108
 Total Service Time:                      mean = 2142.900 	 std = 21.154
 Avg Service Time:                        mean = 5.047 	 std = 0.069
 Std Service Time:                        mean = 2.090 	 std = 0.068
+Avg Service Time Increase (%):           mean = 5.227% 	 std = 1.062%
 =====================================================
+
 =====================================================
 Experiment Results [6 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
@@ -770,7 +879,9 @@ Std Task Time (incl. Reallocation):      mean = 3.067 	 std = 0.121
 Total Service Time:                      mean = 2609.300 	 std = 35.134
 Avg Service Time:                        mean = 5.171 	 std = 0.076
 Std Service Time:                        mean = 2.179 	 std = 0.044
+Avg Service Time Increase (%):           mean = 7.805% 	 std = 0.850%
 =====================================================
+
 =====================================================
 Experiment Results [7 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
@@ -782,7 +893,9 @@ Std Task Time (incl. Reallocation):      mean = 3.180 	 std = 0.102
 Total Service Time:                      mean = 3071.800 	 std = 44.081
 Avg Service Time:                        mean = 5.244 	 std = 0.093
 Std Service Time:                        mean = 2.225 	 std = 0.062
+Avg Service Time Increase (%):           mean = 9.522% 	 std = 1.129%
 =====================================================
+
 =====================================================
 Experiment Results [8 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
@@ -794,7 +907,9 @@ Std Task Time (incl. Reallocation):      mean = 3.338 	 std = 0.114
 Total Service Time:                      mean = 3571.100 	 std = 24.753
 Avg Service Time:                        mean = 5.429 	 std = 0.070
 Std Service Time:                        mean = 2.346 	 std = 0.052
+Avg Service Time Increase (%):           mean = 13.018% 	 std = 1.037%
 =====================================================
+
 =====================================================
 Experiment Results [9 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
@@ -806,7 +921,9 @@ Std Task Time (incl. Reallocation):      mean = 3.409 	 std = 0.113
 Total Service Time:                      mean = 4038.000 	 std = 49.024
 Avg Service Time:                        mean = 5.497 	 std = 0.115
 Std Service Time:                        mean = 2.448 	 std = 0.051
+Avg Service Time Increase (%):           mean = 14.952% 	 std = 1.425%
 =====================================================
+
 =====================================================
 Experiment Results [10 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_KARMA over 10 experiments
 =====================================================
@@ -818,10 +935,10 @@ Std Task Time (incl. Reallocation):      mean = 3.597 	 std = 0.104
 Total Service Time:                      mean = 4491.400 	 std = 55.446
 Avg Service Time:                        mean = 5.655 	 std = 0.076
 Std Service Time:                        mean = 2.652 	 std = 0.064
+Avg Service Time Increase (%):           mean = 18.621% 	 std = 0.953%
 =====================================================
-"""
 
-"""
+
 A* Calls
 | Algorithm                          | 1             | 2               | 3                | 4                 | 5                 | 6                  | 7                  | 8                  | 9                  | 10                   |
 | ---------------------------------- | ------------- | --------------- | ---------------- | ----------------- | ----------------- | ------------------ | ------------------ | ------------------ | ------------------ | -------------------- |
@@ -885,4 +1002,12 @@ Std Service Time
 | DECENTRALIZED_NEGOTIATE_EGOISTIC   | 1.93 (0.10) | 1.93 (0.07) | 2.00 (0.10) | 2.04 (0.10) | 2.07 (0.04) | 2.15 (0.05) | 2.27 (0.08) | 2.33 (0.07) | 2.47 (0.04) | 2.59 (0.07) |
 | DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 1.93 (0.10) | 1.94 (0.15) | 1.97 (0.07) | 2.01 (0.08) | 2.14 (0.06) | 2.17 (0.05) | 2.27 (0.06) | 2.35 (0.08) | 2.47 (0.07) | 2.56 (0.11) |
 | DECENTRALIZED_NEGOTIATE_KARMA      | 1.93 (0.10) | 1.95 (0.08) | 1.99 (0.09) | 2.02 (0.06) | 2.09 (0.07) | 2.18 (0.04) | 2.22 (0.06) | 2.35 (0.05) | 2.45 (0.05) | 2.65 (0.06) |
+
+Avg Service Time Increase (%)
+| Algorithm                          | 1           | 2           | 3           | 4            | 5            | 6            | 7            | 8            | 9            | 10           |
+| ---------------------------------- | ----------- | ----------- | ----------- | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ |
+| DECENTRALIZED_RESPECT              | 0.00 (0.00) | 3.49 (1.20) | 7.46 (1.52) | 11.76 (0.83) | 15.36 (0.67) | 21.12 (1.19) | 26.55 (1.66) | 31.51 (1.96) | 37.80 (1.22) | 44.60 (1.42) |
+| DECENTRALIZED_NEGOTIATE_EGOISTIC   | 0.00 (0.00) | 1.41 (0.72) | 3.21 (0.64) | 4.83 (0.64)  | 6.98 (0.86)  | 9.41 (1.45)  | 12.05 (0.81) | 14.69 (1.45) | 17.66 (1.23) | 21.02 (1.15) |
+| DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 0.00 (0.00) | 0.86 (0.26) | 2.10 (0.47) | 3.43 (0.63)  | 5.17 (0.47)  | 6.63 (0.80)  | 8.96 (0.76)  | 11.02 (0.97) | 13.17 (0.93) | 15.75 (1.10) |
+| DECENTRALIZED_NEGOTIATE_KARMA      | 0.00 (0.00) | 0.98 (0.31) | 2.52 (0.64) | 4.12 (0.60)  | 5.23 (1.06)  | 7.80 (0.85)  | 9.52 (1.13)  | 13.02 (1.04) | 14.95 (1.42) | 18.62 (0.95) |
 """

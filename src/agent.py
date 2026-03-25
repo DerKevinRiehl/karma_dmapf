@@ -69,7 +69,10 @@ class Agent:
         self.target_position = task.from_position
         if self.current_position == task.from_position:
             self.status = AGENT_STATUS_CARRY
-            self.assigned_task.pickup_time = time
+
+            if self.assigned_task.pickup_time is None:
+                self.assigned_task.pickup_time = time
+                self.assigned_task.minimum_task_time = self._compute_minimum_task_time()
         else:
             self.status = AGENT_STATUS_PICKUP
 
@@ -96,8 +99,35 @@ class Agent:
                 # if the task was only picked up now, set pickup time
                 if self.assigned_task.pickup_time is None:
                     self.assigned_task.pickup_time = time
+                    self.assigned_task.minimum_task_time = (
+                        self._compute_minimum_task_time()
+                    )
             else:
                 raise ValueError("Agent in CARRY status without assigned task.")
+
+    def _compute_minimum_task_time(self) -> int:
+        if self.assigned_task is None:
+            raise ValueError("Cannot compute minimum task time without assigned task.")
+
+        path = self.path_planner.astar(
+            start=(
+                self.current_position[0],
+                self.current_position[1],
+                self.current_orientation,
+            ),
+            goal=(self.assigned_task.to_position[0], self.assigned_task.to_position[1]),
+            dynamic_occupancy=None,
+            ignore_counter=True,  # do not increment the AStarPathPlanner.COUNTER for evaluation-only shortest path calculation
+        )
+
+        if path:
+            return path[-1].t
+
+        raise ValueError(
+            "Could not compute minimum task time: No path found from {} to {}.".format(
+                self.current_position, self.assigned_task.to_position
+            )
+        )
 
     def execute_route(self) -> None:
         if len(self.route) > 0:
