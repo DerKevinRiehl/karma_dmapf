@@ -197,7 +197,7 @@ class Environment:
             if routes is not None:
                 for idx, agent in enumerate(planning_relevant_agents):
                     agent.route = routes[idx]
-            else: # Fallback: DECENTRALIZED_ALTRUISTIC
+            else:  # Fallback: DECENTRALIZED_ALTRUISTIC
                 self.handle_agents_route_planning_decentralized_negotiate(
                     NegotiationStrategy.negotiate_altruistic
                 )
@@ -364,7 +364,11 @@ class Environment:
                     agent.route = []
                     if use_agent_params:
                         agreement_to_solve_conflict = negotiation_function(
-                            cost_other, cost_mine, conflicting_agent, agent, self.settings["params_karma"]
+                            cost_other,
+                            cost_mine,
+                            conflicting_agent,
+                            agent,
+                            self.settings["params_karma"],
                         )
                     else:
                         agreement_to_solve_conflict = negotiation_function(

@@ -83,7 +83,9 @@ class Planner_CBS:
                 s_t1: Optional[PathPlannerState]
                 if t + 1 < len(path):
                     s_t1 = path[t + 1]
-                elif t + 1 < len(path) + self.cbs_params.get("MAX_IDLE_TIME_CONSIDERED", 0):
+                elif t + 1 < len(path) + self.cbs_params.get(
+                    "MAX_IDLE_TIME_CONSIDERED", 0
+                ):
                     s_t1 = path[-1]
                 else:
                     s_t1 = None
@@ -92,14 +94,26 @@ class Planner_CBS:
                     pos_t: Tuple[int, int] = (s_t.x, s_t.y)
                     # vertex conflict at time t
                     if pos_t in positions_t:
-                        return {"time1": t, "time2": t, "a1": positions_t[pos_t], "a2": i, "pos": pos_t}
+                        return {
+                            "time1": t,
+                            "time2": t,
+                            "a1": positions_t[pos_t],
+                            "a2": i,
+                            "pos": pos_t,
+                        }
                     positions_t[pos_t] = i
 
                 if s_t1 is not None:
                     pos_t1: Tuple[int, int] = (s_t1.x, s_t1.y)
                     # multiple agents at same cell at time t+1 (vertex conflict at t+1)
                     if pos_t1 in positions_t1:
-                        return {"time1": t + 1, "time2": t + 1, "a1": positions_t1[pos_t1], "a2": i, "pos": pos_t1}
+                        return {
+                            "time1": t + 1,
+                            "time2": t + 1,
+                            "a1": positions_t1[pos_t1],
+                            "a2": i,
+                            "pos": pos_t1,
+                        }
                     positions_t1[pos_t1] = i
 
             # now check for "just-vacated" conflicts: cell occupied at t by agent A and at t+1 by agent B
@@ -107,7 +121,13 @@ class Planner_CBS:
                 if pos in positions_t1:
                     a_at_t1 = positions_t1[pos]
                     if a_at_t != a_at_t1:
-                        return {"time1": t, "time2": t + 1, "a1": a_at_t, "a2": a_at_t1, "pos": pos}
+                        return {
+                            "time1": t,
+                            "time2": t + 1,
+                            "a1": a_at_t,
+                            "a2": a_at_t1,
+                            "pos": pos,
+                        }
 
         return None
 
@@ -180,7 +200,9 @@ class Planner_CBS:
                 child.constraints = list(node.constraints)
                 x, y = conflict["pos"]
                 # use per-agent time (allows detecting and constraining t and t+1 differently)
-                t: int = conflict["time1"] if agent == conflict["a1"] else conflict["time2"]
+                t: int = (
+                    conflict["time1"] if agent == conflict["a1"] else conflict["time2"]
+                )
                 child.constraints.append(CBS_Constraint(agent, x, y, t))
                 child.paths = list(node.paths)
                 start_state: PathPlannerState = child.paths[agent][0]

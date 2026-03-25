@@ -16,7 +16,12 @@ from constants import (
 )
 
 import numpy as np
-from constants import SQUARE_SYMBOL_EMPTY, SQUARE_SYMBOL_OCCUPIED, SPAWN_BORDER, SPAWN_OCCUPIED_CELLS_BORDER
+from constants import (
+    SQUARE_SYMBOL_EMPTY,
+    SQUARE_SYMBOL_OCCUPIED,
+    SPAWN_BORDER,
+    SPAWN_OCCUPIED_CELLS_BORDER,
+)
 
 
 class GridTools:
@@ -30,7 +35,11 @@ class GridTools:
         # For decentralized planning we want to consider just-vacated positions as occupied
         # for one additional timestep to prevent immediate re-entry. Enable that here.
         reservation_grid = GridTools.create_3D_reservation_grid(
-            environment, time_horizon, agent_list, tabu_agent, consider_vacated_positions=True
+            environment,
+            time_horizon,
+            agent_list,
+            tabu_agent,
+            consider_vacated_positions=True,
         )
         dynamic_occupancy: NDArray[np.bool_] = reservation_grid != 0
         return dynamic_occupancy
@@ -86,18 +95,32 @@ class GridTools:
                     current_pos[0] -= 1
 
                 if time_counter < reservation_table.shape[0]:
-                    reservation_table[time_counter][current_pos[0]][current_pos[1]] = agent.id
-                    if consider_vacated_positions and (time_counter + 1) < reservation_table.shape[0]:
-                        reservation_table[time_counter + 1][current_pos[0]][current_pos[1]] = agent.id
+                    reservation_table[time_counter][current_pos[0]][
+                        current_pos[1]
+                    ] = agent.id
+                    if (
+                        consider_vacated_positions
+                        and (time_counter + 1) < reservation_table.shape[0]
+                    ):
+                        reservation_table[time_counter + 1][current_pos[0]][
+                            current_pos[1]
+                        ] = agent.id
                 time_counter += 1
                 if time_counter == reservation_table.shape[0]:
                     break
             # end
 
             while time_counter < time_horizon:
-                reservation_table[time_counter][current_pos[0]][current_pos[1]] = agent.id
-                if consider_vacated_positions and (time_counter + 1) < reservation_table.shape[0]:
-                    reservation_table[time_counter + 1][current_pos[0]][current_pos[1]] = agent.id
+                reservation_table[time_counter][current_pos[0]][
+                    current_pos[1]
+                ] = agent.id
+                if (
+                    consider_vacated_positions
+                    and (time_counter + 1) < reservation_table.shape[0]
+                ):
+                    reservation_table[time_counter + 1][current_pos[0]][
+                        current_pos[1]
+                    ] = agent.id
                 time_counter += 1
         return reservation_table
 

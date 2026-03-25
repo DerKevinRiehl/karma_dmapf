@@ -20,30 +20,29 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
 )
 
-
 random_seeds = [41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
 
-grid_sizes = [5]#, 10, 15, 20]
+grid_sizes = [5]  # , 10, 15, 20]
 
 n_agents_map = {
-    5:  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    5: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     10: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     15: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     20: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 }
 for grid_size in grid_sizes:
     for controller in [
-            # MAPF_CONTROLLER_CENTRALIZED,
-            # MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
-            # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
-            # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
-            MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA
-        ]:
-        
+        # MAPF_CONTROLLER_CENTRALIZED,
+        # MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+        # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
+        # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+        MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA
+    ]:
+
         for n_agent in n_agents_map[grid_size]:
             simulation_settings = {
                 "random_seed": 42,
-                "grid_size": grid_size+2,
+                "grid_size": grid_size + 2,
                 "n_agents": n_agent,
                 "mapf_control": controller,
                 "time_horizon_visualization": 10,
@@ -61,13 +60,13 @@ for grid_size in grid_sizes:
                 },
                 "debug_statements": False,
             }
-            
+
             astar_calls_list = []
             n_completed_tasks_list = []
             n_total_cost_list = []
             n_average_cost_list = []
             n_distribution_list = []
-            
+
             for random_seed in random_seeds:
                 simulation_settings["random_seed"] = random_seed
                 n_astar_calls = 0
@@ -81,7 +80,9 @@ for grid_size in grid_sizes:
                 for n in range(0, simulation_settings["n_agents"]):  # int(N_AGENTS/2)):
                     environment.spawn_task()
                 # simulation loop
-                while environment.time < environment.settings["time_simulation_duration"]:            
+                while (
+                    environment.time < environment.settings["time_simulation_duration"]
+                ):
                     if simulation_settings["debug_statements"]:
                         print(
                             "\ttime:",
@@ -99,7 +100,9 @@ for grid_size in grid_sizes:
                     while len(environment.tasks) < len(environment.agents):
                         old_len = len(environment.tasks)
                         environment.spawn_task()
-                        if old_len == len(environment.tasks): # currently too crowded to spawn
+                        if old_len == len(
+                            environment.tasks
+                        ):  # currently too crowded to spawn
                             break
                     # handle tasks
                     environment.assign_open_tasks()
@@ -107,7 +110,7 @@ for grid_size in grid_sizes:
                     # report A-STAR Calls
                     n_astar_calls += AStarPathPlanner.COUNTER
                     AStarPathPlanner.COUNTER = 0
-            
+
                 # evaluation
                 task_completion_times = [
                     task.completed_time - task.spawned_time
@@ -124,27 +127,37 @@ for grid_size in grid_sizes:
                 n_total_cost_list.append(n_total_cost)
                 n_average_cost_list.append(n_average_cost)
                 n_distribution_list.append(n_distribution)
-            
+
             def summarize(x):
                 x = np.array(x, dtype=float)
-                return x.mean(), x.std(ddof=0)  # population std; use ddof=1 for sample std
-            
+                return x.mean(), x.std(
+                    ddof=0
+                )  # population std; use ddof=1 for sample std
+
             avg_astar, std_astar = summarize(astar_calls_list)
             avg_completed, std_completed = summarize(n_completed_tasks_list)
             avg_total_cost, std_total_cost = summarize(n_total_cost_list)
             avg_avg_cost, std_avg_cost = summarize(n_average_cost_list)
             avg_distribution, std_distribution = summarize(n_distribution_list)
-            
+
             print("=====================================================")
             print(
-                "Experiment Results ["+str(simulation_settings["n_agents"])+" agents] ["+str(simulation_settings["grid_size"]-2)+" grid-size] for algorithm",
+                "Experiment Results ["
+                + str(simulation_settings["n_agents"])
+                + " agents] ["
+                + str(simulation_settings["grid_size"] - 2)
+                + " grid-size] for algorithm",
                 simulation_settings["mapf_control"],
                 "over",
                 len(astar_calls_list),
                 "experiments",
             )
             print("=====================================================")
-            print("A* calls:        mean = {:.3f} \t std = {:.3f}".format(avg_astar, std_astar))
+            print(
+                "A* calls:        mean = {:.3f} \t std = {:.3f}".format(
+                    avg_astar, std_astar
+                )
+            )
             print(
                 "Completed tasks: mean = {:.3f} \t std = {:.3f}".format(
                     avg_completed, std_completed
@@ -156,7 +169,9 @@ for grid_size in grid_sizes:
                 )
             )
             print(
-                "Avg cost:        mean = {:.3f} \t std = {:.3f}".format(avg_avg_cost, std_avg_cost)
+                "Avg cost:        mean = {:.3f} \t std = {:.3f}".format(
+                    avg_avg_cost, std_avg_cost
+                )
             )
             print(
                 "Distribution:    mean = {:.3f} \t std = {:.3f}".format(
@@ -268,8 +283,6 @@ Distribution:    mean = 4.456 	 std = 0.099
 """
 
 
-
-
 """
 =====================================================
 Experiment Results [1 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_EGOISTIC over 10 experiments
@@ -373,7 +386,6 @@ Distribution:    mean = 3.599 	 std = 0.090
 """
 
 
-
 """
 =====================================================
 Experiment Results [1 agents] [5 grid-size] for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
@@ -475,7 +487,6 @@ Avg cost:        mean = 11.055 	 std = 0.182
 Distribution:    mean = 3.465 	 std = 0.168
 =====================================================
 """
-
 
 
 """

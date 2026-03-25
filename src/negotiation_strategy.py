@@ -14,7 +14,7 @@ class NegotiationStrategy:
 
     @staticmethod
     def negotiate_egoistic(cost_other: int, cost_mine: int) -> bool:
-        agreement_to_solve_conflict: bool 
+        agreement_to_solve_conflict: bool
         if cost_other <= 0:
             agreement_to_solve_conflict = True
         else:
@@ -47,14 +47,21 @@ class NegotiationStrategy:
         else:
             if cost_mine > cost_other:
                 cost_delta = cost_mine - cost_other
-                if cost_delta >= karma_params["delta_threshold"]: 
-                    if agent_self.karma_balance >= agent_other.karma_balance and agent_self.karma_balance >= karma_params["karma_payment"]:
+                if cost_delta >= karma_params["delta_threshold"]:
+                    if (
+                        agent_self.karma_balance >= agent_other.karma_balance
+                        and agent_self.karma_balance >= karma_params["karma_payment"]
+                    ):
                         agreement_to_solve_conflict = True
-                        agent_self.karma_balance = agent_self.karma_balance - karma_params["karma_payment"]
-                        agent_other.karma_balance = agent_other.karma_balance + karma_params["karma_payment"]
+                        agent_self.karma_balance = (
+                            agent_self.karma_balance - karma_params["karma_payment"]
+                        )
+                        agent_other.karma_balance = (
+                            agent_other.karma_balance + karma_params["karma_payment"]
+                        )
                     else:
                         agreement_to_solve_conflict = False
-                else:                    
+                else:
                     agreement_to_solve_conflict = False
             else:
                 agreement_to_solve_conflict = False

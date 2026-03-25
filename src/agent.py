@@ -48,7 +48,9 @@ class Agent:
             static_occupancy_grid=self.environment.static_grid.occupancy_grid,
             astar_params=self.environment.settings["params_astar"],
         )
-        self.karma_balance: int = self.environment.settings["params_karma"]["initial_karma"]
+        self.karma_balance: int = self.environment.settings["params_karma"][
+            "initial_karma"
+        ]
 
     def is_idle(self) -> bool:
         return self.assigned_task is None

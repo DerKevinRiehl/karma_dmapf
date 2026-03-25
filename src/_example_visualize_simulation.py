@@ -26,7 +26,7 @@ from constants import (
 ###############################################################################
 simulation_settings = {
     "random_seed": 42,
-    "grid_size": 5+2, #15,
+    "grid_size": 5 + 2,  # 15,
     "n_agents": 10,
     "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
@@ -55,7 +55,7 @@ simulation_settings = {
 environment = Environment(settings=simulation_settings)
 
 # spawn initial agents
-for n in range(0, simulation_settings["n_agents"]): 
+for n in range(0, simulation_settings["n_agents"]):
     environment.spawn_agent()
 
 # simulation loop
