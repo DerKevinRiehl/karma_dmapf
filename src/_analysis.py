@@ -20,6 +20,58 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
 )
 
+
+def print_markdown_table(title, data, algorithms, agents):
+    # data[algo][agent] -> (mean, std)
+
+    # 1. Gather all data
+    header = ["Algorithm"] + [str(a) for a in agents]
+    table_rows = []
+
+    for algo in algorithms:
+        row = [algo]
+        for agent in agents:
+            if agent in data.get(algo, {}):
+                mean, std = data[algo][agent]
+                if title == "Avg Cost" or title == "Distribution":
+                    val = f"{mean:.2f} ({std:.2f})"
+                else:
+                    val = f"{mean:.1f} ({std:.1f})"
+                row.append(val)
+            else:
+                row.append("-")
+        table_rows.append(row)
+
+    # 2. Determine column widths
+    # Initialize with header lengths
+    col_widths = [len(h) for h in header]
+
+    # Update with maximum row content lengths
+    for row in table_rows:
+        for i, cell in enumerate(row):
+            col_widths[i] = max(col_widths[i], len(cell))
+
+    # 3. Print table with formatting
+    print(f"\n{title}")
+
+    # Header
+    header_str = (
+        "| " + " | ".join(f"{h:<{w}}" for h, w in zip(header, col_widths)) + " |"
+    )
+    print(header_str)
+
+    # Separator
+    separator_str = "| " + " | ".join("-" * w for w in col_widths) + " |"
+    print(separator_str)
+
+    # Rows
+    for row in table_rows:
+        row_str = (
+            "| " + " | ".join(f"{cell:<{w}}" for cell, w in zip(row, col_widths)) + " |"
+        )
+        print(row_str)
+
+
 random_seeds = [41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
 
 grid_sizes = [5]  # , 10, 15, 20]
@@ -30,7 +82,11 @@ n_agents_map = {
     15: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     20: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 }
+results_summary = {}
+
 for grid_size in grid_sizes:
+    results_summary[grid_size] = {}
+    controllers_run = []
     for controller in [
         # MAPF_CONTROLLER_CENTRALIZED,
         MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
@@ -38,6 +94,9 @@ for grid_size in grid_sizes:
         MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
         MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
     ]:
+        if controller not in controllers_run:
+            controllers_run.append(controller)
+            results_summary[grid_size][controller] = {}
 
         for n_agent in n_agents_map[grid_size]:
             simulation_settings = {
@@ -140,6 +199,15 @@ for grid_size in grid_sizes:
             avg_avg_cost, std_avg_cost = summarize(n_average_cost_list)
             avg_distribution, std_distribution = summarize(n_distribution_list)
 
+            metrics = {
+                "A* Calls": (avg_astar, std_astar),
+                "Completed Tasks": (avg_completed, std_completed),
+                "Total Cost": (avg_total_cost, std_total_cost),
+                "Avg Cost": (avg_avg_cost, std_avg_cost),
+                "Distribution": (avg_distribution, std_distribution),
+            }
+            results_summary[grid_size][controller][n_agent] = metrics
+
             print("=====================================================")
             print(
                 "Experiment Results ["
@@ -179,6 +247,27 @@ for grid_size in grid_sizes:
                 )
             )
             print("=====================================================")
+
+    # Print tables for this grid_size
+    agents = n_agents_map[grid_size]
+
+    for metric_name in [
+        "A* Calls",
+        "Completed Tasks",
+        "Total Cost",
+        "Avg Cost",
+        "Distribution",
+    ]:
+        metric_data = {}
+        for algo in controllers_run:
+            metric_data[algo] = {}
+            for agent in agents:
+                if agent in results_summary.get(grid_size, {}).get(algo, {}):
+                    metric_data[algo][agent] = results_summary[grid_size][algo][agent][
+                        metric_name
+                    ]
+
+        print_markdown_table(metric_name, metric_data, controllers_run, agents)
 
 """
 =====================================================
@@ -555,45 +644,44 @@ Distribution:    mean = 3.597 	 std = 0.104
 =====================================================
 """
 
-# ! TABLE BELOW IS OUTDATED - code for generation is missing from this script; refer to the printed results above for the most up-to-date metrics
 """
 A* Calls
 | Algorithm                          | 1             | 2               | 3                | 4                 | 5                 | 6                  | 7                  | 8                  | 9                  | 10                   |
 | ---------------------------------- | ------------- | --------------- | ---------------- | ----------------- | ----------------- | ------------------ | ------------------ | ------------------ | ------------------ | -------------------- |
 | DECENTRALIZED_RESPECT              | 3627.2 (95.3) | 8616.4 (398.2)  | 14903.6 (515.1)  | 23603.7 (1281.8)  | 33813.4 (2082.8)  | 49391.7 (2447.0)   | 71365.0 (5322.2)   | 93859.8 (4993.3)   | 137436.5 (14004.0) | 192568.9 (17932.3)   |
-| DECENTRALIZED_NEGOTIATE_EGOISTIC   | 3627.2 (95.3) | 11827.1 (588.4) | 24001.0 (2077.5) | 57626.1 (19747.2) | 85014.5 (16216.9) | 159407.4 (36010.8) | 282301.2 (42488.5) | 460835.5 (74604.5) | 672043.0 (88455.7) | 1092802.2 (102441.0) |
-| DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 3627.2 (95.3) | 10971.6 (554.2) | 22421.4 (1728.5) | 41284.0 (2358.1)  | 71787.9 (9656.9)  | 117762.1 (11983.3) | 190382.8 (14146.9) | 286685.2 (22163.8) | 428890.9 (36802.2) | 643188.6 (52284.9)   |
-| DECENTRALIZED_NEGOTIATE_KARMA      | 3627.2 (95.3) | 11407.3 (809.6) | 23376.1 (1565.1) | 43177.0 (4783.2)  | 77670.0 (17932.1) | 132168.7 (26922.5) | 230870.5 (37196.6) | 377555.7 (43255.6) | 526167.7 (77633.3) | 816255.7 (95092.4)   |
+| DECENTRALIZED_NEGOTIATE_EGOISTIC   | 3627.2 (95.3) | 12704.4 (829.5) | 28355.7 (2865.0) | 56836.8 (11385.1) | 96837.1 (11593.6) | 174789.3 (32285.6) | 271263.2 (40784.5) | 487585.6 (49257.5) | 743421.2 (55166.6) | 1183481.5 (122521.2) |
+| DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 3627.2 (95.3) | 11362.4 (614.4) | 25519.7 (1942.7) | 48669.7 (5586.4)  | 80443.6 (9141.0)  | 127094.9 (12860.3) | 206782.5 (17366.5) | 324765.9 (35047.1) | 491146.6 (41530.7) | 675210.3 (29136.6)   |
+| DECENTRALIZED_NEGOTIATE_KARMA      | 3627.2 (95.3) | 12143.6 (910.7) | 25941.5 (2191.8) | 52054.2 (10376.3) | 88674.5 (16153.7) | 148996.7 (16420.3) | 236957.2 (25946.0) | 395884.2 (58398.9) | 598178.8 (80569.3) | 882634.3 (77188.4)   |
 
 Completed Tasks
-| Algorithm                          | 1          | 2           | 3           | 4           | 5           | 6           | 7           | 8           | 9            | 10           |
-| ---------------------------------- | ---------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ------------ | ------------ |
-| DECENTRALIZED_RESPECT              | 85.2 (2.6) | 166.5 (3.8) | 247.7 (3.0) | 325.4 (6.1) | 401.9 (4.2) | 472.9 (6.5) | 538.5 (7.8) | 604.1 (9.7) | 654.6 (9.0)  | 701.7 (7.8)  |
-| DECENTRALIZED_NEGOTIATE_EGOISTIC   | 85.2 (2.6) | 168.0 (3.4) | 252.5 (2.8) | 340.1 (5.5) | 421.9 (4.6) | 505.4 (6.4) | 586.1 (6.7) | 657.8 (8.6) | 734.3 (5.4)  | 792.2 (7.4)  |
-| DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 85.2 (2.6) | 170.8 (3.2) | 256.9 (3.5) | 340.8 (6.3) | 426.9 (6.4) | 513.5 (4.7) | 595.0 (9.3) | 674.9 (6.1) | 752.4 (10.0) | 815.5 (11.7) |
-| DECENTRALIZED_NEGOTIATE_KARMA      | 85.2 (2.6) | 168.4 (2.5) | 256.3 (2.1) | 340.0 (4.3) | 425.8 (7.2) | 510.6 (8.0) | 589.4 (6.5) | 665.0 (7.8) | 746.8 (5.9)  | 803.8 (6.2)  |
+| Algorithm                          | 1          | 2           | 3           | 4           | 5           | 6           | 7           | 8           | 9           | 10           |
+| ---------------------------------- | ---------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ------------ |
+| DECENTRALIZED_RESPECT              | 85.2 (2.6) | 166.5 (3.8) | 247.7 (3.0) | 325.4 (6.1) | 401.9 (4.2) | 472.9 (6.5) | 538.5 (7.8) | 604.1 (9.7) | 654.6 (9.0) | 701.7 (7.8)  |
+| DECENTRALIZED_NEGOTIATE_EGOISTIC   | 85.2 (2.6) | 168.7 (3.3) | 252.4 (3.6) | 340.3 (5.3) | 418.8 (5.6) | 499.3 (5.6) | 581.3 (5.2) | 656.5 (8.8) | 725.3 (8.4) | 783.8 (7.5)  |
+| DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 85.2 (2.6) | 170.8 (3.1) | 256.3 (5.4) | 342.1 (5.0) | 425.3 (4.1) | 510.0 (5.1) | 591.7 (8.1) | 669.3 (8.9) | 743.2 (6.9) | 807.1 (7.2)  |
+| DECENTRALIZED_NEGOTIATE_KARMA      | 85.2 (2.6) | 167.8 (2.4) | 253.7 (4.3) | 341.6 (4.5) | 424.6 (3.9) | 504.6 (5.0) | 585.8 (6.1) | 657.8 (6.6) | 734.8 (9.9) | 794.3 (10.5) |
 
 Total Cost
-| Algorithm                          | 1           | 2            | 3            | 4             | 5            | 6             | 7             | 8             | 9             | 10            |
-| ---------------------------------- | ----------- | ------------ | ------------ | ------------- | ------------ | ------------- | ------------- | ------------- | ------------- | ------------- |
-| DECENTRALIZED_RESPECT              | 910.5 (4.5) | 1822.0 (7.9) | 2737.0 (6.0) | 3657.4 (7.3)  | 4575.6 (6.1) | 5496.5 (7.4)  | 6422.7 (16.8) | 7340.7 (11.2) | 8294.4 (18.7) | 9152.2 (23.6) |
-| DECENTRALIZED_NEGOTIATE_EGOISTIC   | 910.5 (4.5) | 1822.2 (5.8) | 2734.6 (8.8) | 3646.4 (5.2)  | 4557.7 (5.8) | 5465.2 (14.6) | 6375.7 (10.9) | 7299.4 (13.5) | 8218.0 (16.6) | 9049.0 (26.1) |
-| DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 910.5 (4.5) | 1818.9 (4.3) | 2732.0 (8.0) | 3636.1 (7.7)  | 4554.1 (7.6) | 5460.3 (7.5)  | 6371.5 (11.5) | 7284.6 (9.2)  | 8197.1 (11.0) | 9012.9 (25.2) |
-| DECENTRALIZED_NEGOTIATE_KARMA      | 910.5 (4.5) | 1821.8 (6.2) | 2726.1 (5.2) | 3638.3 (6.6)  | 4551.1 (7.2) | 5457.9 (7.0)  | 6375.0 (15.3) | 7291.8 (16.9) | 8203.3 (13.1) | 9023.2 (26.6) |
+| Algorithm                          | 1           | 2            | 3            | 4             | 5             | 6             | 7             | 8             | 9             | 10            |
+| ---------------------------------- | ----------- | ------------ | ------------ | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
+| DECENTRALIZED_RESPECT              | 910.5 (4.5) | 1822.0 (7.9) | 2737.0 (6.0) | 3657.4 (7.3)  | 4575.6 (6.1)  | 5496.5 (7.4)  | 6422.7 (16.8) | 7340.7 (11.2) | 8294.4 (18.7) | 9152.2 (23.6) |
+| DECENTRALIZED_NEGOTIATE_EGOISTIC   | 910.5 (4.5) | 1822.2 (6.2) | 2732.3 (6.8) | 3641.2 (11.7) | 4559.5 (7.2)  | 5470.8 (11.7) | 6383.8 (10.3) | 7302.2 (11.7) | 8227.6 (14.8) | 9065.8 (10.6) |
+| DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 910.5 (4.5) | 1820.2 (5.4) | 2726.4 (9.3) | 3639.9 (7.7)  | 4551.7 (10.9) | 5460.8 (9.7)  | 6375.7 (14.0) | 7286.8 (19.2) | 8206.9 (10.0) | 9022.1 (23.8) |
+| DECENTRALIZED_NEGOTIATE_KARMA      | 910.5 (4.5) | 1820.2 (6.2) | 2734.3 (7.1) | 3642.5 (4.8)  | 4546.1 (5.3)  | 5465.2 (10.1) | 6380.4 (11.2) | 7306.2 (12.4) | 8218.4 (14.0) | 9033.7 (20.1) |
 
 Avg Cost
 | Algorithm                          | 1            | 2            | 3            | 4            | 5            | 6            | 7            | 8            | 9            | 10           |
 | ---------------------------------- | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ |
-| DECENTRALIZED_RESPECT              | 10.70 (0.33) | 10.95 (0.27) | 11.05 (0.15) | 11.24 (0.22) | 11.39 (0.12) | 11.63 (0.17) | 11.93 (0.19) | 12.16 (0.19) | 12.67 (0.19) | 13.05 (0.17) |
-| DECENTRALIZED_NEGOTIATE_EGOISTIC   | 10.70 (0.33) | 10.85 (0.24) | 10.83 (0.15) | 10.73 (0.19) | 10.80 (0.12) | 10.82 (0.16) | 10.88 (0.13) | 11.10 (0.16) | 11.19 (0.08) | 11.42 (0.12) |
-| DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 10.70 (0.33) | 10.65 (0.22) | 10.64 (0.16) | 10.67 (0.20) | 10.67 (0.17) | 10.63 (0.10) | 10.71 (0.18) | 10.79 (0.10) | 10.90 (0.15) | 11.06 (0.18) |
-| DECENTRALIZED_NEGOTIATE_KARMA      | 10.70 (0.33) | 10.82 (0.17) | 10.64 (0.08) | 10.70 (0.14) | 10.69 (0.19) | 10.69 (0.18) | 10.82 (0.14) | 10.97 (0.15) | 10.99 (0.10) | 11.23 (0.10) |
+| DECENTRALIZED_RESPECT              | 10.70 (0.33) | 10.95 (0.27) | 11.05 (0.15) | 11.24 (0.22) | 11.39 (0.12) | 11.63 (0.17) | 11.93 (0.19) | 12.15 (0.19) | 12.67 (0.19) | 13.04 (0.17) |
+| DECENTRALIZED_NEGOTIATE_EGOISTIC   | 10.70 (0.33) | 10.81 (0.24) | 10.83 (0.16) | 10.70 (0.20) | 10.89 (0.15) | 10.96 (0.14) | 10.98 (0.10) | 11.13 (0.16) | 11.35 (0.15) | 11.57 (0.11) |
+| DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 10.70 (0.33) | 10.66 (0.21) | 10.64 (0.25) | 10.64 (0.17) | 10.70 (0.12) | 10.71 (0.11) | 10.78 (0.15) | 10.89 (0.17) | 11.04 (0.11) | 11.18 (0.11) |
+| DECENTRALIZED_NEGOTIATE_KARMA      | 10.70 (0.33) | 10.85 (0.19) | 10.78 (0.21) | 10.66 (0.15) | 10.71 (0.10) | 10.83 (0.12) | 10.89 (0.13) | 11.11 (0.12) | 11.19 (0.16) | 11.38 (0.16) |
 
 Distribution
 | Algorithm                          | 1           | 2           | 3           | 4           | 5           | 6           | 7           | 8           | 9           | 10          |
 | ---------------------------------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
 | DECENTRALIZED_RESPECT              | 2.85 (0.18) | 2.81 (0.12) | 3.05 (0.08) | 3.21 (0.11) | 3.37 (0.08) | 3.48 (0.12) | 3.73 (0.11) | 3.94 (0.11) | 4.26 (0.10) | 4.46 (0.10) |
-| DECENTRALIZED_NEGOTIATE_EGOISTIC   | 2.85 (0.18) | 2.75 (0.10) | 2.86 (0.13) | 2.98 (0.13) | 2.97 (0.11) | 3.09 (0.08) | 3.19 (0.10) | 3.27 (0.06) | 3.45 (0.11) | 3.60 (0.09) |
-| DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 2.85 (0.18) | 2.80 (0.18) | 2.91 (0.12) | 2.92 (0.11) | 3.04 (0.09) | 3.01 (0.10) | 3.19 (0.08) | 3.21 (0.13) | 3.29 (0.11) | 3.47 (0.17) |
-| DECENTRALIZED_NEGOTIATE_KARMA      | 2.85 (0.18) | 2.76 (0.09) | 2.93 (0.13) | 2.95 (0.07) | 2.93 (0.12) | 3.03 (0.10) | 3.18 (0.13) | 3.21 (0.10) | 3.34 (0.07) | 3.48 (0.11) |
+| DECENTRALIZED_NEGOTIATE_EGOISTIC   | 2.85 (0.18) | 2.69 (0.15) | 2.92 (0.12) | 2.93 (0.10) | 3.04 (0.09) | 3.10 (0.12) | 3.18 (0.09) | 3.27 (0.10) | 3.49 (0.06) | 3.62 (0.12) |
+| DECENTRALIZED_NEGOTIATE_ALTRUISTIC | 2.85 (0.18) | 2.82 (0.19) | 2.84 (0.10) | 2.90 (0.13) | 2.97 (0.10) | 3.04 (0.04) | 3.12 (0.11) | 3.30 (0.12) | 3.39 (0.14) | 3.47 (0.16) |
+| DECENTRALIZED_NEGOTIATE_KARMA      | 2.85 (0.18) | 2.73 (0.14) | 2.88 (0.13) | 2.92 (0.13) | 3.00 (0.11) | 3.07 (0.12) | 3.18 (0.10) | 3.34 (0.11) | 3.41 (0.11) | 3.60 (0.10) |
 """
