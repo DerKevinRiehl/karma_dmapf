@@ -401,7 +401,9 @@ def plot_environment_and_reservation(environment, save_filename=None):
     ax2.set_ylim(-0.5, rt.shape[2] - 0.5)
     ax2.set_zlim(-0.5, rt.shape[0] - 0.5)
     ax2.set_box_aspect((1, 1, 1))
-    ax2.legend(loc="upper left", fontsize=8)
+    if len(unique_agents) < 30:
+        ax2.legend(loc="upper left", fontsize=8)
+
     ax2.set_title("Braid Diagram (Reservation Table)", fontsize=14)
 
     plt.tight_layout()

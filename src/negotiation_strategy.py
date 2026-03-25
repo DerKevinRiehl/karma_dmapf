@@ -48,10 +48,7 @@ class NegotiationStrategy:
             if cost_mine > cost_other:
                 cost_delta = cost_mine - cost_other
                 if cost_delta >= karma_params["delta_threshold"]:
-                    if (
-                        agent_self.karma_balance >= agent_other.karma_balance
-                        and agent_self.karma_balance >= karma_params["karma_payment"]
-                    ):
+                    if agent_self.karma_balance >= karma_params["karma_payment"]:
                         agreement_to_solve_conflict = True
                         agent_self.karma_balance = (
                             agent_self.karma_balance - karma_params["karma_payment"]

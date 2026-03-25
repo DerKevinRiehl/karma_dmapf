@@ -95,9 +95,12 @@ for random_seed in range(41, 51):
         AStarPathPlanner.COUNTER = 0
 
     # evaluation
+    all_completed_tasks = [
+        task for task_list in environment.completed_tasks.values() for task in task_list
+    ]
     task_completion_times = [
         task.completed_time - task.spawned_time
-        for task in environment.completed_tasks
+        for task in all_completed_tasks
         if task.completed_time is not None
     ]
     n_completed_tasks = len(task_completion_times)
@@ -144,7 +147,7 @@ print(
     )
 )
 print(
-    "Avg cost:        mean = {:.3f} \t std = {:.3f}".format(avg_avg_cost, std_avg_cost)
+    "Avg cost (all):  mean = {:.3f} \t std = {:.3f}".format(avg_avg_cost, std_avg_cost)
 )
 print(
     "Distribution:    mean = {:.3f} \t std = {:.3f}".format(

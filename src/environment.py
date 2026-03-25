@@ -28,7 +28,9 @@ class Environment:
         self.time: int = 0
         self.agents: List[Agent] = []
         self.tasks: List[Task] = []
-        self.completed_tasks: List[Task] = []
+        self.completed_tasks: dict[int, List[Task]] = (
+            {}
+        )  # mapping: agent_id -> list of completed tasks
 
         # set random seed
         np.random.seed(self.settings["random_seed"])
@@ -94,7 +96,9 @@ class Environment:
 
             self.tasks.remove(task)
             task.completed_time = self.time
-            self.completed_tasks.append(task)
+            if task.assigned_agent.id not in self.completed_tasks:
+                self.completed_tasks[task.assigned_agent.id] = []
+            self.completed_tasks[task.assigned_agent.id].append(task)
 
         return len(finished_tasks) > 0
 
