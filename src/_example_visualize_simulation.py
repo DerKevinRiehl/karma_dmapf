@@ -46,6 +46,7 @@ simulation_settings = {
         "initial_karma": 10,
         "delta_threshold": 1,
         "karma_payment": 1,
+        "karma_influence": 0.2,
     },
     "debug_statements": True,
 }
