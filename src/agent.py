@@ -73,6 +73,15 @@ class Agent:
             if self.assigned_task.pickup_time is None:
                 self.assigned_task.pickup_time = time
                 self.assigned_task.minimum_task_time = self._compute_minimum_task_time()
+
+                # if strategy requires, reset Karma balance on pickup
+                if (
+                    self.environment.settings["mapf_control"]
+                    == "DECENTRALIZED_NEGOTIATE_TRIP_KARMA"
+                ):
+                    self.karma_balance = self.environment.settings["params_karma"][
+                        "initial_karma"
+                    ]
         else:
             self.status = AGENT_STATUS_PICKUP
 
@@ -102,6 +111,16 @@ class Agent:
                     self.assigned_task.minimum_task_time = (
                         self._compute_minimum_task_time()
                     )
+
+                    # if strategy requires, reset Karma balance on pickup
+                    if (
+                        self.environment.settings["mapf_control"]
+                        == "DECENTRALIZED_NEGOTIATE_TRIP_KARMA"
+                    ):
+                        self.karma_balance = self.environment.settings["params_karma"][
+                            "initial_karma"
+                        ]
+
             else:
                 raise ValueError("Agent in CARRY status without assigned task.")
 

@@ -11,6 +11,7 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
 )
 from planner_mapf_central_CBS import Planner_CBS
 from planner_assignment_central import Planner_Assignment_Central
@@ -127,6 +128,13 @@ class Environment:
         elif (
             self.settings["mapf_control"]
             == MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA
+        ):
+            self.handle_agents_route_planning_decentralized_negotiate(
+                NegotiationStrategy.negotiate_karma, use_agent_params=True
+            )
+        elif (
+            self.settings["mapf_control"]
+            == MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA
         ):
             self.handle_agents_route_planning_decentralized_negotiate(
                 NegotiationStrategy.negotiate_karma, use_agent_params=True

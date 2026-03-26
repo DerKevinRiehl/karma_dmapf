@@ -18,6 +18,7 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
 )
 
 
@@ -73,7 +74,7 @@ def print_markdown_table(title, data, algorithms, agents):
 
 
 random_seeds = range(41, 51)
-grid_sizes = [10]  # , 10, 15, 20]
+grid_sizes = [5]  # , 10, 15, 20]
 
 n_agents_map = {
     5: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -92,6 +93,7 @@ for grid_size in grid_sizes:
         MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
         MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
         MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
+        MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
     ]:
         if controller not in controllers_run:
             controllers_run.append(controller)
@@ -112,8 +114,8 @@ for grid_size in grid_sizes:
                     "PLANNING_HORIZON": 100,
                 },
                 "params_karma": {
-                    "initial_karma": 10,
-                    "delta_threshold": 0,
+                    "initial_karma": 0,
+                    "delta_threshold": 1,
                     "karma_payment": 1,
                     "karma_influence": 0.2,
                 },
