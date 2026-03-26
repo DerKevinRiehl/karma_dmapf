@@ -22,13 +22,33 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
 )
 
-
 # ensure results directory exists
 os.makedirs("results", exist_ok=True)
 
 
+def gini(x):
+    # Mean absolute difference
+    mad = np.abs(np.subtract.outer(x, x)).mean()
+    # Relative mean absolute difference
+    rmad = mad / np.mean(x)
+    # Gini coefficient
+    g = 0.5 * rmad
+    return g
+
+
+def summarize(x):
+    x = np.array(x, dtype=float)
+    return (
+        x.mean(),
+        x.std(ddof=0),
+        np.median(x),
+        gini(x),
+        np.percentile(x, 75) - np.percentile(x, 25),
+    )  # population std; use ddof=1 for sample std
+
+
 def get_markdown_table_str(title, data, algorithms, agents):
-    # data[algo][agent] -> (mean, std)
+    # data[algo][agent] -> (mean, std, median, gini, iqr)
 
     # 1. Gather all data
     header = ["Algorithm"] + [str(a) for a in agents]
@@ -38,11 +58,11 @@ def get_markdown_table_str(title, data, algorithms, agents):
         row = [algo]
         for agent in agents:
             if agent in data.get(algo, {}):
-                mean, std = data[algo][agent]
+                mean, std, median, gini_val, iqr = data[algo][agent]
                 if title.startswith("Avg") or title.startswith("Std"):
-                    val = f"{mean:.2f} ({std:.2f})"
+                    val = f"{mean:.2f} ({std:.2f}) | {median:.2f} | {gini_val:.2f} | {iqr:.2f}"
                 else:
-                    val = f"{mean:.1f} ({std:.1f})"
+                    val = f"{mean:.1f} ({std:.1f}) | {median:.1f} | {gini_val:.1f} | {iqr:.1f}"
                 row.append(val)
             else:
                 row.append("-")
@@ -347,67 +367,165 @@ for grid_size in grid_sizes:
                     n_avg_service_increase_per_agent
                 )
 
-            def summarize(x):
-                x = np.array(x, dtype=float)
-                return x.mean(), x.std(
-                    ddof=0
-                )  # population std; use ddof=1 for sample std
-
-            avg_astar, std_astar = summarize(astar_calls_list)
-            avg_completed, std_completed = summarize(n_completed_tasks_list)
-
-            avg_total_task, std_total_task = summarize(n_total_task_time_list)
-            avg_avg_task, std_avg_task = summarize(n_average_task_time_list)
-            avg_std_task, std_std_task = summarize(n_std_task_time_list)
-
-            avg_total_srv, std_total_srv = summarize(n_total_service_time_list)
-            avg_avg_srv, std_avg_srv = summarize(n_average_service_time_list)
-            avg_std_srv, std_std_srv = summarize(n_std_service_time_list)
-
-            avg_avg_increase, std_avg_increase = summarize(
-                n_average_service_increase_list
+            avg_astar, std_astar, median_astar, gini_astar, iqr_astar = summarize(
+                astar_calls_list
             )
+            (
+                avg_completed,
+                std_completed,
+                median_completed,
+                gini_completed,
+                iqr_completed,
+            ) = summarize(n_completed_tasks_list)
+
+            (
+                avg_total_task,
+                std_total_task,
+                median_total_task,
+                gini_total_task,
+                iqr_total_task,
+            ) = summarize(n_total_task_time_list)
+            (
+                avg_avg_task,
+                std_avg_task,
+                median_avg_task,
+                gini_avg_task,
+                iqr_avg_task,
+            ) = summarize(n_average_task_time_list)
+            (
+                avg_std_task,
+                std_std_task,
+                median_std_task,
+                gini_std_task,
+                iqr_std_task,
+            ) = summarize(n_std_task_time_list)
+
+            (
+                avg_total_srv,
+                std_total_srv,
+                median_total_srv,
+                gini_total_srv,
+                iqr_total_srv,
+            ) = summarize(n_total_service_time_list)
+            (
+                avg_avg_srv,
+                std_avg_srv,
+                median_avg_srv,
+                gini_avg_srv,
+                iqr_avg_srv,
+            ) = summarize(n_average_service_time_list)
+            (
+                avg_std_srv,
+                std_std_srv,
+                median_std_srv,
+                gini_std_srv,
+                iqr_std_srv,
+            ) = summarize(n_std_service_time_list)
+
+            (
+                avg_avg_increase,
+                std_avg_increase,
+                median_avg_increase,
+                gini_avg_increase,
+                iqr_avg_increase,
+            ) = summarize(n_average_service_increase_list)
 
             # Per Agent Metrics
             # Service Time
-            avg_avg_srv_per_agent, std_avg_srv_per_agent = summarize(
-                n_avg_service_time_per_agent_list
-            )
+            (
+                avg_avg_srv_per_agent,
+                std_avg_srv_per_agent,
+                median_avg_srv_per_agent,
+                gini_avg_srv_per_agent,
+                iqr_avg_srv_per_agent,
+            ) = summarize(n_avg_service_time_per_agent_list)
             # Service Increase
-            avg_avg_inc_per_agent, std_avg_inc_per_agent = summarize(
-                n_avg_service_increase_per_agent_list
-            )
+            (
+                avg_avg_inc_per_agent,
+                std_avg_inc_per_agent,
+                median_avg_inc_per_agent,
+                gini_avg_inc_per_agent,
+                iqr_avg_inc_per_agent,
+            ) = summarize(n_avg_service_increase_per_agent_list)
 
             metrics = {
-                "A* Calls": (avg_astar, std_astar),
-                "Completed Tasks": (avg_completed, std_completed),
+                "A* Calls": (
+                    avg_astar,
+                    std_astar,
+                    median_astar,
+                    gini_astar,
+                    iqr_astar,
+                ),
+                "Completed Tasks": (
+                    avg_completed,
+                    std_completed,
+                    median_completed,
+                    gini_completed,
+                    iqr_completed,
+                ),
                 "Total Task Time (incl. Reallocation) (all agents)": (
                     avg_total_task,
                     std_total_task,
+                    median_total_task,
+                    gini_total_task,
+                    iqr_total_task,
                 ),
                 "Avg Task Time (incl. Reallocation) (all agents)": (
                     avg_avg_task,
                     std_avg_task,
+                    median_avg_task,
+                    gini_avg_task,
+                    iqr_avg_task,
                 ),
                 "Std Task Time (incl. Reallocation) (all agents)": (
                     avg_std_task,
                     std_std_task,
+                    median_std_task,
+                    gini_std_task,
+                    iqr_std_task,
                 ),
-                "Total Service Time (all agents)": (avg_total_srv, std_total_srv),
-                "Avg Service Time (all agents)": (avg_avg_srv, std_avg_srv),
-                "Std Service Time (all agents)": (avg_std_srv, std_std_srv),
+                "Total Service Time (all agents)": (
+                    avg_total_srv,
+                    std_total_srv,
+                    median_total_srv,
+                    gini_total_srv,
+                    iqr_total_srv,
+                ),
+                "Avg Service Time (all agents)": (
+                    avg_avg_srv,
+                    std_avg_srv,
+                    median_avg_srv,
+                    gini_avg_srv,
+                    iqr_avg_srv,
+                ),
+                "Std Service Time (all agents)": (
+                    avg_std_srv,
+                    std_std_srv,
+                    median_std_srv,
+                    gini_std_srv,
+                    iqr_std_srv,
+                ),
                 "Avg Service Time Increase (%) (all agents)": (
                     avg_avg_increase,
                     std_avg_increase,
+                    median_avg_increase,
+                    gini_avg_increase,
+                    iqr_avg_increase,
                 ),
                 # New Metrics
                 "Avg Service Time (per agent mean)": (
                     avg_avg_srv_per_agent,
                     std_avg_srv_per_agent,
+                    median_avg_srv_per_agent,
+                    gini_avg_srv_per_agent,
+                    iqr_avg_srv_per_agent,
                 ),
                 "Avg Service Increase (%) (per agent mean)": (
                     avg_avg_inc_per_agent,
                     std_avg_inc_per_agent,
+                    median_avg_inc_per_agent,
+                    gini_avg_inc_per_agent,
+                    iqr_avg_inc_per_agent,
                 ),
             }
             results_summary[grid_size][controller][n_agent] = metrics
@@ -427,60 +545,92 @@ for grid_size in grid_sizes:
             )
             report_lines.append("=====================================================")
             report_lines.append(
-                "A* calls:                                             mean = {:.3f} \t std = {:.3f}".format(
-                    avg_astar, std_astar
+                "A* calls:                                             mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
+                    avg_astar, std_astar, median_astar, gini_astar, iqr_astar
                 )
             )
             report_lines.append(
-                "Completed tasks:                                      mean = {:.3f} \t std = {:.3f}".format(
-                    avg_completed, std_completed
+                "Completed tasks:                                      mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
+                    avg_completed,
+                    std_completed,
+                    median_completed,
+                    gini_completed,
+                    iqr_completed,
                 )
             )
             report_lines.append(
-                "Total Task Time (incl. Reallocation) (all agents):    mean = {:.3f} \t std = {:.3f}".format(
-                    avg_total_task, std_total_task
+                "Total Task Time (incl. Reallocation) (all agents):    mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
+                    avg_total_task,
+                    std_total_task,
+                    median_total_task,
+                    gini_total_task,
+                    iqr_total_task,
                 )
             )
             report_lines.append(
-                "Avg Task Time (incl. Reallocation) (all agents):      mean = {:.3f} \t std = {:.3f}".format(
-                    avg_avg_task, std_avg_task
+                "Avg Task Time (incl. Reallocation) (all agents):      mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
+                    avg_avg_task,
+                    std_avg_task,
+                    median_avg_task,
+                    gini_avg_task,
+                    iqr_avg_task,
                 )
             )
             report_lines.append(
-                "Std Task Time (incl. Reallocation) (all agents):      mean = {:.3f} \t std = {:.3f}".format(
-                    avg_std_task, std_std_task
+                "Std Task Time (incl. Reallocation) (all agents):      mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
+                    avg_std_task,
+                    std_std_task,
+                    median_std_task,
+                    gini_std_task,
+                    iqr_std_task,
                 )
             )
             report_lines.append(
-                "Total Service Time (all agents):                      mean = {:.3f} \t std = {:.3f}".format(
-                    avg_total_srv, std_total_srv
+                "Total Service Time (all agents):                      mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
+                    avg_total_srv,
+                    std_total_srv,
+                    median_total_srv,
+                    gini_total_srv,
+                    iqr_total_srv,
                 )
             )
             report_lines.append(
-                "Avg Service Time (all agents):                        mean = {:.3f} \t std = {:.3f}".format(
-                    avg_avg_srv, std_avg_srv
+                "Avg Service Time (all agents):                        mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
+                    avg_avg_srv, std_avg_srv, median_avg_srv, gini_avg_srv, iqr_avg_srv
                 )
             )
             report_lines.append(
-                "Std Service Time (all agents):                        mean = {:.3f} \t std = {:.3f}".format(
-                    avg_std_srv, std_std_srv
+                "Std Service Time (all agents):                        mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
+                    avg_std_srv, std_std_srv, median_std_srv, gini_std_srv, iqr_std_srv
                 )
             )
             report_lines.append(
-                "Avg Service Time Increase (%) (all agents):           mean = {:.3f}% \t std = {:.3f}%".format(
-                    avg_avg_increase, std_avg_increase
+                "Avg Service Time Increase (%) (all agents):           mean = {:.3f}% \t std = {:.3f}% \t median = {:.3f}% \t gini = {:.3f} \t iqr = {:.3f}%".format(
+                    avg_avg_increase,
+                    std_avg_increase,
+                    median_avg_increase,
+                    gini_avg_increase,
+                    iqr_avg_increase,
                 )
             )
 
             report_lines.append(
-                "Avg Service Time (per agent mean):                    mean = {:.3f} \t std = {:.3f}".format(
-                    avg_avg_srv_per_agent, std_avg_srv_per_agent
+                "Avg Service Time (per agent mean):                    mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
+                    avg_avg_srv_per_agent,
+                    std_avg_srv_per_agent,
+                    median_avg_srv_per_agent,
+                    gini_avg_srv_per_agent,
+                    iqr_avg_srv_per_agent,
                 )
             )
 
             report_lines.append(
-                "Avg Service Increase (%) (per agent mean):            mean = {:.3f}% \t std = {:.3f}%".format(
-                    avg_avg_inc_per_agent, std_avg_inc_per_agent
+                "Avg Service Increase (%) (per agent mean):            mean = {:.3f}% \t std = {:.3f}% \t median = {:.3f}% \t gini = {:.3f} \t iqr = {:.3f}%".format(
+                    avg_avg_inc_per_agent,
+                    std_avg_inc_per_agent,
+                    median_avg_inc_per_agent,
+                    gini_avg_inc_per_agent,
+                    iqr_avg_inc_per_agent,
                 )
             )
 
