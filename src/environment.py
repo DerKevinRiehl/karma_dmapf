@@ -321,7 +321,7 @@ class Environment:
             self.handle_agents_route_planning_decentralized_negotiate(
                 NegotiationStrategy.negotiate_karma, use_agent_params=True
             )
-        self.repair_immediate_conflicts()
+        # self.repair_immediate_conflicts()
         
     def handle_agents_route_execution(self) -> None:
         for agent in self.agents:

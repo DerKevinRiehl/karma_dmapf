@@ -39,6 +39,23 @@ class AStarPathPlanner:
     def manhattan(self, a: Tuple[int, int], b: Tuple[int, int]) -> int:
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
+    def goal_remains_free(
+        self,
+        goal_state: PathPlannerState,
+        dynamic_occupancy: Optional[NDArray[np.bool_]],
+    ) -> bool:
+        if dynamic_occupancy is None:
+            return True
+
+        latest_known_time = min(
+            self.astar_params["planning_horizon"],
+            dynamic_occupancy.shape[0] - 1,
+        )
+        for t in range(goal_state.t, latest_known_time + 1):
+            if dynamic_occupancy[t, goal_state.x, goal_state.y]:
+                return False
+        return True
+
     def astar(
         self,
         start: Tuple[int, int, int],
@@ -64,6 +81,7 @@ class AStarPathPlanner:
             start[0], start[1], start[2], 0, "start"
         )
         heapq.heappush(open_list, (0, start_state, []))
+        hit_the_goal = False
         while open_list:
             if not ignore_counter:
                 AStarPathPlanner.COUNTER += 1
@@ -81,12 +99,14 @@ class AStarPathPlanner:
             visited.add(key)
             new_path: List[PathPlannerState] = path + [state]
 
-            # ABORT CONDITION: FOUND GOAL
             if dynamic_occupancy is not None:
                 if state.t < dynamic_occupancy.shape[0] and dynamic_occupancy[state.t, state.x, state.y]:
                     continue
             
+            # ABORT CONDITION: FOUND GOAL
             if (state.x, state.y) == goal:
+                hit_the_goal = True
+            if hit_the_goal and self.goal_remains_free(state, dynamic_occupancy):
                 return new_path
 
             # EXPLORE

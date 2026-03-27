@@ -29,7 +29,7 @@ from constants import (
 simulation_settings = {
     "random_seed": 42,
     "grid_size": 5 + 2,  # 15,
-    "n_agents": 5,
+    "n_agents": 10,
     "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
     "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
