@@ -75,10 +75,10 @@ class GridTools:
             current_pos: List[int] = agent.current_position.copy()
 
             # first position
-            if len(agent.route) > 0:
-                reservation_table[0][current_pos[0]][current_pos[1]] = agent.id
-                if consider_vacated_positions and 1 < reservation_table.shape[0]:
-                    reservation_table[1][current_pos[0]][current_pos[1]] = agent.id
+            reservation_table[0][current_pos[0]][current_pos[1]] = agent.id
+            # if len(agent.route) > 0: # all agents should be considered
+            if consider_vacated_positions and 1 < reservation_table.shape[0]:
+                reservation_table[1][current_pos[0]][current_pos[1]] = agent.id
             time_counter += 1
 
             # part of route
@@ -109,8 +109,7 @@ class GridTools:
                 if time_counter == reservation_table.shape[0]:
                     break
             # end
-
-            while time_counter < time_horizon:
+            while time_counter < reservation_table.shape[0]:
                 reservation_table[time_counter][current_pos[0]][
                     current_pos[1]
                 ] = agent.id

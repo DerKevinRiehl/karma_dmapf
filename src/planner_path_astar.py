@@ -82,6 +82,10 @@ class AStarPathPlanner:
             new_path: List[PathPlannerState] = path + [state]
 
             # ABORT CONDITION: FOUND GOAL
+            if dynamic_occupancy is not None:
+                if state.t < dynamic_occupancy.shape[0] and dynamic_occupancy[state.t, state.x, state.y]:
+                    continue
+            
             if (state.x, state.y) == goal:
                 return new_path
 
@@ -105,27 +109,28 @@ class AStarPathPlanner:
                 )
 
             # BRANCH 2: ACTION: ROTATE (turn left/right)
-            heapq.heappush(
-                open_list,
-                (
-                    next_t + self.manhattan((state.x, state.y), goal),
-                    PathPlannerState(
-                        state.x, state.y, (state.theta - 1) % 4, next_t, "A"
+            if dynamic_occupancy is None or not dynamic_occupancy[next_t, state.x, state.y]:
+                heapq.heappush(
+                    open_list,
+                    (
+                        next_t + self.manhattan((state.x, state.y), goal),
+                        PathPlannerState(
+                            state.x, state.y, (state.theta - 1) % 4, next_t, "A"
+                        ),
+                        new_path,
                     ),
-                    new_path,
-                ),
-            )
-            heapq.heappush(
-                open_list,
-                (
-                    next_t + self.manhattan((state.x, state.y), goal),
-                    PathPlannerState(
-                        state.x, state.y, (state.theta + 1) % 4, next_t, "C"
+                )
+                heapq.heappush(
+                    open_list,
+                    (
+                        next_t + self.manhattan((state.x, state.y), goal),
+                        PathPlannerState(
+                            state.x, state.y, (state.theta + 1) % 4, next_t, "C"
+                        ),
+                        new_path,
                     ),
-                    new_path,
-                ),
-            )
-
+                )
+                
             # BRANCH 3: ACTION: MOVE FORWARD
             dx, dy = DIRS[state.theta]
             nx, ny = state.x + dx, state.y + dy

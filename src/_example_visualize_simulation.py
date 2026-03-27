@@ -29,19 +29,19 @@ from constants import (
 simulation_settings = {
     "random_seed": 42,
     "grid_size": 5 + 2,  # 15,
-    "n_agents": 10,
-    # "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
-    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+    "n_agents": 5,
+    "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
+    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
-    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
+    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
     "time_horizon_visualization": 10,
     "time_simulation_duration": 100,
     "params_astar": {"max_iterations": 5000, "planning_horizon": 50},
     "params_cbs": {
         "max_iterations": 5000,
-        "MAX_IDLE_TIME_CONSIDERED": 5,
+        "MAX_IDLE_TIME_CONSIDERED": 20,
         "PLANNING_HORIZON": 100,
     },
     "params_karma": {
@@ -50,8 +50,37 @@ simulation_settings = {
         "karma_payment": 1,
         "karma_influence": 0.2,
     },
-    "debug_statements": True,
+    "debug_statements": False,
 }
+
+
+
+def check_violation(environment, previous_positions=None):
+    # vertex conflicts
+    for i, agent_a in enumerate(environment.agents):
+        for agent_b in environment.agents[i + 1:]:
+            if tuple(agent_a.current_position) == tuple(agent_b.current_position):
+                print(
+                    f"[{environment.time}] Vertex conflict: agents {agent_a.id} and {agent_b.id} "
+                    f"at {agent_a.current_position}"
+                )
+                return True
+    # edge conflicts
+    if previous_positions is not None:
+        for i, agent_a in enumerate(environment.agents):
+            for agent_b in environment.agents[i + 1:]:
+                prev_a = tuple(previous_positions[agent_a.id])
+                prev_b = tuple(previous_positions[agent_b.id])
+                curr_a = tuple(agent_a.current_position)
+                curr_b = tuple(agent_b.current_position)
+
+                if prev_a == curr_b and prev_b == curr_a and curr_a != curr_b:
+                    print(
+                        f"[{environment.time}] Edge conflict: agents {agent_a.id} and {agent_b.id} "
+                        f"swapped {prev_a} <-> {prev_b}"
+                    )
+                    return True
+    return False
 
 
 ###############################################################################
@@ -62,6 +91,10 @@ environment = Environment(settings=simulation_settings)
 # spawn initial agents
 for n in range(0, simulation_settings["n_agents"]):
     environment.spawn_agent()
+
+# spawn initial agents
+for n in range(0, simulation_settings["n_agents"]):
+    environment.spawn_task()
 
 # simulation loop
 SIMULATION_TIME_STEPS_STOP_SPAWNING = 70
@@ -79,17 +112,16 @@ while environment.time < environment.settings["time_simulation_duration"]:
     environment.time += 1
 
     # handle agents
+    previous_positions = {a.id: list(a.current_position) for a in environment.agents}
     environment.handle_agents()
 
     # # spawn tasks randomly
-    if environment.time < SIMULATION_TIME_STEPS_STOP_SPAWNING:
-        if len(environment.tasks) < len(environment.agents):
-            environment.spawn_task()
-        else:
-            if np.random.random() > 0.9:
-                if len(environment.tasks) * 2 + len(environment.agents) < 100 - 30:
-                    environment.spawn_task()
-
+    while len(environment.tasks) < len(environment.agents):
+        n = len(environment.tasks)
+        environment.spawn_task()
+        if n == len(environment.tasks):
+            break
+        
     # handle tasks
     environment.assign_open_tasks()
     closed = environment.close_finished_tasks()
@@ -99,6 +131,7 @@ while environment.time < environment.settings["time_simulation_duration"]:
     plot_environment_and_reservation(
         environment, save_filename=f"figs/x_image_{environment.time:04d}.png"
     )
+    check_violation(environment, previous_positions)
 
     # report A-STAR Calls
     print("\tA-Star Calls:", AStarPathPlanner.COUNTER)

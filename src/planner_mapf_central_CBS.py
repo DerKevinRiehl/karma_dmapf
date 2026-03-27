@@ -74,7 +74,7 @@ class Planner_CBS:
                 s_t: Optional[PathPlannerState]
                 if t < len(path):
                     s_t = path[t]
-                elif t < len(path) + self.cbs_params.get("MAX_IDLE_TIME_CONSIDERED", 0):
+                elif t < len(path) + self.cbs_params["MAX_IDLE_TIME_CONSIDERED"]:
                     s_t = path[-1]
                 else:
                     s_t = None
@@ -83,9 +83,7 @@ class Planner_CBS:
                 s_t1: Optional[PathPlannerState]
                 if t + 1 < len(path):
                     s_t1 = path[t + 1]
-                elif t + 1 < len(path) + self.cbs_params.get(
-                    "MAX_IDLE_TIME_CONSIDERED", 0
-                ):
+                elif t + 1 < len(path) + self.cbs_params["MAX_IDLE_TIME_CONSIDERED"]:
                     s_t1 = path[-1]
                 else:
                     s_t1 = None
