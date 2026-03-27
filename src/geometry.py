@@ -26,6 +26,16 @@ from constants import (
 
 class GridTools:
     @staticmethod
+    def _state_at_time(
+        path: List[PathPlannerState], t: int
+    ) -> Optional[PathPlannerState]:
+        if len(path) == 0:
+            return None
+        if t < len(path):
+            return path[t]
+        return path[-1]
+
+    @staticmethod
     def create_dynamic_occupancy_grid(
         environment: Environment,
         time_horizon: int,
@@ -125,28 +135,68 @@ class GridTools:
 
     @staticmethod
     def detect_conflicts(
-        path: List[PathPlannerState], reservation_table: NDArray[np.int_]
+        path: List[PathPlannerState],
+        agent_list: List[Agent],
+        time_horizon: int,
+        tabu_agent: Optional[Agent] = None,
     ) -> List[Dict[str, Any]]:
         conflicts: List[Dict[str, Any]] = []
         conflicting_agents: List[int] = []
-        for state in path:
-            t: int = state.t
-            if t >= reservation_table.shape[0]:
-                break
+        if len(path) == 0:
+            return conflicts
 
-            x: int = state.x
-            y: int = state.y
-            occupying_agent: int = int(reservation_table[t][x][y])
-            if occupying_agent != 0:
-                if occupying_agent not in conflicting_agents:
-                    conflicts.append(
-                        {
-                            "time": t,
-                            "position": (x, y),
-                            "conflicting_agent": occupying_agent,
-                        }
-                    )
-                    conflicting_agents.append(occupying_agent)
+        for agent in agent_list:
+            if tabu_agent is not None and agent == tabu_agent:
+                continue
+
+            other_path = agent.path_planner.convert_route_to_path(agent)
+            if other_path is None or len(other_path) == 0:
+                continue
+
+            max_t = min(time_horizon, max(path[-1].t, other_path[-1].t))
+            for t in range(max_t + 1):
+                my_state = GridTools._state_at_time(path, t)
+                other_state = GridTools._state_at_time(other_path, t)
+                if my_state is None or other_state is None:
+                    continue
+
+                my_pos = (my_state.x, my_state.y)
+                other_pos = (other_state.x, other_state.y)
+                if my_pos == other_pos:
+                    if agent.id not in conflicting_agents:
+                        conflicts.append(
+                            {
+                                "time": t,
+                                "position": my_pos,
+                                "conflicting_agent": agent.id,
+                                "type": "vertex",
+                            }
+                        )
+                        conflicting_agents.append(agent.id)
+                    break
+
+                if t == 0:
+                    continue
+
+                my_prev = GridTools._state_at_time(path, t - 1)
+                other_prev = GridTools._state_at_time(other_path, t - 1)
+                if my_prev is None or other_prev is None:
+                    continue
+
+                my_prev_pos = (my_prev.x, my_prev.y)
+                other_prev_pos = (other_prev.x, other_prev.y)
+                if my_prev_pos == other_pos and other_prev_pos == my_pos:
+                    if agent.id not in conflicting_agents:
+                        conflicts.append(
+                            {
+                                "time": t,
+                                "position": my_pos,
+                                "conflicting_agent": agent.id,
+                                "type": "edge",
+                            }
+                        )
+                        conflicting_agents.append(agent.id)
+                    break
         return conflicts
 
 

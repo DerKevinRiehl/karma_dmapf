@@ -28,17 +28,17 @@ from constants import (
 ###############################################################################
 simulation_settings = {
     "random_seed": 42,
-    "grid_size": 20 + 2,  # 15,
-    "n_agents": 180,
-    "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
+    "grid_size": 5 + 2,  # 15,
+    "n_agents": 10,
+    # "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
     "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
-    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
     "time_horizon_visualization": 10,
     "time_simulation_duration": 100,
-    "params_astar": {"max_iterations": 5000, "planning_horizon": int(20*20*1.2), "planning_horizon_buffer": 20},
+    "params_astar": {"max_iterations": 5000, "planning_horizon": int(20*20), "planning_horizon_buffer": 20},
     "params_cbs": {
         "max_iterations": 5000,
         "MAX_IDLE_TIME_CONSIDERED": 20,

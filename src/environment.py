@@ -263,7 +263,15 @@ class Environment:
             and len(agent.target_position) == 2
         ]
 
+        agents_already_negotiated = []
+
         for agent in planning_relevant_agents:
+            # if due to negotiation already changed...
+            if agent in agents_already_negotiated:
+                continue
+            if len(agent.route) > 0:
+                continue
+            
             # try for this agent to plan, given the restrictions it step by step considers
             planning_finished: bool = False
             agents_considered: List[Agent] = []
@@ -321,17 +329,12 @@ class Environment:
 
                 # rebuild full reservation table each iteration so we always check conflicts against the
                 # latest routes other agents may have switched to during negotiation
-                reservation_table_complete = GridTools.create_3D_reservation_grid(
-                    environment=self,
-                    time_horizon=self.settings["params_astar"]["planning_horizon"],
-                    agent_list=self.agents,
-                    tabu_agent=agent,
-                    consider_vacated_positions=True,  # take into consideration potential location swapping that would be allowed otherwise (not handled by this conflict detection)
-                )
-
                 # determine conflicts with current plan
                 conflicts = GridTools.detect_conflicts(
-                    current_path, reservation_table=reservation_table_complete
+                    current_path,
+                    agent_list=self.agents,
+                    time_horizon=self.get_sufficient_planning_horizon(),
+                    tabu_agent=agent,
                 )
 
                 # if no conflicts, found the path and can quit
@@ -404,11 +407,10 @@ class Environment:
                             conflicting_agent.change_path_to_satisfy(
                                 change_to_path=alternative_path_other
                             )
+                            agents_already_negotiated.append(conflicting_agent)
                         else:
-                            pass
-                            # raise ValueError(
-                            #     f"Conflict for agent {conflicting_agent.id} but no alternative path found."
-                            # )
+                            all_conflicts_resolved = False
+                            break
                         continue
 
                     # otherwise, break the loop
@@ -418,8 +420,18 @@ class Environment:
 
                 # if others changed their plans and agreed, we can keep this
                 if all_conflicts_resolved:
-                    planning_finished = True
-                    break
+                    remaining_conflicts = GridTools.detect_conflicts(
+                        current_path,
+                        agent_list=self.agents,
+                        time_horizon=self.get_sufficient_planning_horizon(),
+                        tabu_agent=agent,
+                    )
+                    if len(remaining_conflicts) == 0:
+                        planning_finished = True
+                        break
+
+                    all_conflicts_resolved = False
+                    conflicts = remaining_conflicts
 
                 # otherwise, didnt work out, so we have to add them into our agents_considered constraints
                 for conflict in conflicts:

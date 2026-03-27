@@ -330,7 +330,14 @@ class Agent:
 
         # add to_avoid_path to dynamic_occupancy grid
         for state in to_avoid_path:
-            dynamic_occupancy_grid[state.t][state.x][state.y] = True
+            if state.t < dynamic_occupancy_grid.shape[0]:
+                dynamic_occupancy_grid[state.t][state.x][state.y] = True
+
+            # Mirror the "Just vacated" reservation-table behavior for temporary avoidance paths:
+            # block the cell for one extra timestep so a negotiating agent cannot
+            # resolve a conflict by performing an immediate edge swap.
+            if state.t + 1 < dynamic_occupancy_grid.shape[0]:
+                dynamic_occupancy_grid[state.t + 1][state.x][state.y] = True
 
         # if you have a target
         changed_path: Optional[List["PathPlannerState"]] = None
@@ -343,12 +350,12 @@ class Agent:
                 changed_route = self.path_planner.convert_path_to_route(changed_path)
                 changed_cost = len(changed_route if changed_route else [])
                 return (changed_cost - current_cost), changed_path
+            else:
+                return 1000, changed_path
         else:
             # determine if there is any free position nearby to idle parking
             changed_path = self._determine_idle_parking_path(dynamic_occupancy_grid)
-            return -1, changed_path
-
-        return 1000, changed_path
+            return 1000, changed_path
 
     def change_path_to_satisfy(self, change_to_path: List["PathPlannerState"]) -> None:
         alternative_route = self.path_planner.convert_path_to_route(change_to_path)

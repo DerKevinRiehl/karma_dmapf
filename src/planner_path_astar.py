@@ -13,19 +13,38 @@ from constants import DIRS, DIR_NAMES
 
 
 class PathPlannerState:
-    def __init__(self, x: int, y: int, theta: int, t: int, action: Optional[str]):
+    def __init__(
+        self,
+        x: int,
+        y: int,
+        theta: int,
+        t: int,
+        action: Optional[str],
+        goal_reached: bool = False,
+    ):
         self.x: int = x
         self.y: int = y
         self.theta: int = theta
         self.t: int = t
         self.action: Optional[str] = action
+        self.goal_reached: bool = goal_reached
 
     def __lt__(self, other: "PathPlannerState") -> bool:
         return self.t < other.t
 
     def __repr__(self) -> str:
-        return f"PathPlannerState(x={self.x}, y={self.y}, theta={self.theta}, t={self.t}, action={self.action})"
+        return (
+            f"PathPlannerState(x={self.x}, y={self.y}, theta={self.theta}, "
+            f"t={self.t}, action={self.action}, goal_reached={self.goal_reached})"
+        )
 
+
+"""
+The planner is not just “shortest path to goal” in space and time.
+It is “shortest path that reaches the goal at least once and then finishes in a safe resting state.”
+
+This is important to make sure that after reaching goal, no conflicts happen during parking position!
+"""
 
 class AStarPathPlanner:
     COUNTER: int = 0
@@ -85,10 +104,9 @@ class AStarPathPlanner:
         visited: Set[Tuple[int, int, int, int]] = set()
         steps: int = 0
         start_state: PathPlannerState = PathPlannerState(
-            start[0], start[1], start[2], 0, "start"
+            start[0], start[1], start[2], 0, "start", (start[0], start[1]) == goal
         )
         heapq.heappush(open_list, (0, start_state, []))
-        hit_the_goal = False
         while open_list:
             if not ignore_counter:
                 AStarPathPlanner.COUNTER += 1
@@ -111,9 +129,7 @@ class AStarPathPlanner:
                     continue
             
             # ABORT CONDITION: FOUND GOAL
-            if (state.x, state.y) == goal:
-                hit_the_goal = True
-            if hit_the_goal and self.goal_remains_free(
+            if state.goal_reached and self.goal_remains_free(
                 state, dynamic_occupancy, effective_planning_horizon
             ):
                 return new_path
@@ -132,7 +148,14 @@ class AStarPathPlanner:
                     open_list,
                     (
                         next_t + self.manhattan((state.x, state.y), goal),
-                        PathPlannerState(state.x, state.y, state.theta, next_t, "T"),
+                        PathPlannerState(
+                            state.x,
+                            state.y,
+                            state.theta,
+                            next_t,
+                            "T",
+                            state.goal_reached or (state.x, state.y) == goal,
+                        ),
                         new_path,
                     ),
                 )
@@ -144,7 +167,12 @@ class AStarPathPlanner:
                     (
                         next_t + self.manhattan((state.x, state.y), goal),
                         PathPlannerState(
-                            state.x, state.y, (state.theta - 1) % 4, next_t, "A"
+                            state.x,
+                            state.y,
+                            (state.theta - 1) % 4,
+                            next_t,
+                            "A",
+                            state.goal_reached or (state.x, state.y) == goal,
                         ),
                         new_path,
                     ),
@@ -154,7 +182,12 @@ class AStarPathPlanner:
                     (
                         next_t + self.manhattan((state.x, state.y), goal),
                         PathPlannerState(
-                            state.x, state.y, (state.theta + 1) % 4, next_t, "C"
+                            state.x,
+                            state.y,
+                            (state.theta + 1) % 4,
+                            next_t,
+                            "C",
+                            state.goal_reached or (state.x, state.y) == goal,
                         ),
                         new_path,
                     ),
@@ -177,7 +210,12 @@ class AStarPathPlanner:
                             (
                                 next_t + self.manhattan((nx, ny), goal),
                                 PathPlannerState(
-                                    nx, ny, state.theta, next_t, DIR_NAMES[state.theta]
+                                    nx,
+                                    ny,
+                                    state.theta,
+                                    next_t,
+                                    DIR_NAMES[state.theta],
+                                    state.goal_reached or (nx, ny) == goal,
                                 ),
                                 new_path,
                             ),
