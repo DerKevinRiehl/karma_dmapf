@@ -46,6 +46,7 @@ It is “shortest path that reaches the goal at least once and then finishes in 
 This is important to make sure that after reaching goal, no conflicts happen during parking position!
 """
 
+
 class AStarPathPlanner:
     COUNTER: int = 0
 
@@ -125,9 +126,12 @@ class AStarPathPlanner:
             new_path: List[PathPlannerState] = path + [state]
 
             if dynamic_occupancy is not None:
-                if state.t < dynamic_occupancy.shape[0] and dynamic_occupancy[state.t, state.x, state.y]:
+                if (
+                    state.t < dynamic_occupancy.shape[0]
+                    and dynamic_occupancy[state.t, state.x, state.y]
+                ):
                     continue
-            
+
             # ABORT CONDITION: FOUND GOAL
             if state.goal_reached and self.goal_remains_free(
                 state, dynamic_occupancy, effective_planning_horizon
@@ -161,7 +165,10 @@ class AStarPathPlanner:
                 )
 
             # BRANCH 2: ACTION: ROTATE (turn left/right)
-            if dynamic_occupancy is None or not dynamic_occupancy[next_t, state.x, state.y]:
+            if (
+                dynamic_occupancy is None
+                or not dynamic_occupancy[next_t, state.x, state.y]
+            ):
                 heapq.heappush(
                     open_list,
                     (
@@ -192,7 +199,7 @@ class AStarPathPlanner:
                         new_path,
                     ),
                 )
-                
+
             # BRANCH 3: ACTION: MOVE FORWARD
             dx, dy = DIRS[state.theta]
             nx, ny = state.x + dx, state.y + dy

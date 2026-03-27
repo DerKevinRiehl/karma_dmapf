@@ -38,7 +38,11 @@ simulation_settings = {
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
     "time_horizon_visualization": 10,
     "time_simulation_duration": 100,
-    "params_astar": {"max_iterations": 5000, "planning_horizon": int(20*20), "planning_horizon_buffer": 20},
+    "params_astar": {
+        "max_iterations": 5000,
+        "planning_horizon": int(20 * 20),
+        "planning_horizon_buffer": 20,
+    },
     "params_cbs": {
         "max_iterations": 5000,
         "MAX_IDLE_TIME_CONSIDERED": 20,
@@ -54,11 +58,10 @@ simulation_settings = {
 }
 
 
-
 def check_violation(environment, previous_positions=None):
     # vertex conflicts
     for i, agent_a in enumerate(environment.agents):
-        for agent_b in environment.agents[i + 1:]:
+        for agent_b in environment.agents[i + 1 :]:
             if tuple(agent_a.current_position) == tuple(agent_b.current_position):
                 print(
                     f"[{environment.time}] Vertex conflict: agents {agent_a.id} and {agent_b.id} "
@@ -68,7 +71,7 @@ def check_violation(environment, previous_positions=None):
     # edge conflicts
     if previous_positions is not None:
         for i, agent_a in enumerate(environment.agents):
-            for agent_b in environment.agents[i + 1:]:
+            for agent_b in environment.agents[i + 1 :]:
                 prev_a = tuple(previous_positions[agent_a.id])
                 prev_b = tuple(previous_positions[agent_b.id])
                 curr_a = tuple(agent_a.current_position)
@@ -121,7 +124,7 @@ while environment.time < environment.settings["time_simulation_duration"]:
         environment.spawn_task()
         if n == len(environment.tasks):
             break
-        
+
     # handle tasks
     environment.assign_open_tasks()
     closed = environment.close_finished_tasks()

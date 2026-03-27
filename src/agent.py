@@ -133,7 +133,7 @@ class Agent:
         # replanning.
         evaluation_horizon = max(
             self.environment.settings["params_astar"]["planning_horizon"],
-            4 * (self.grid.grid_size ** 2),
+            4 * (self.grid.grid_size**2),
         )
 
         path = self.path_planner.astar(

@@ -102,7 +102,7 @@ class Environment:
             self.completed_tasks[task.assigned_agent.id].append(task)
 
         return len(finished_tasks) > 0
-            
+
     def handle_agents(self) -> None:
         # ROUTE EXECTUION: update agent target and status
         self.handle_agents_route_execution()
@@ -139,7 +139,7 @@ class Environment:
             self.handle_agents_route_planning_decentralized_negotiate(
                 NegotiationStrategy.negotiate_karma, use_agent_params=True
             )
-        
+
     def handle_agents_route_execution(self) -> None:
         for agent in self.agents:
             agent.execute_route()
@@ -181,7 +181,9 @@ class Environment:
         for agent in self.agents:
             min_length = max(min_length, len(agent.route))
         min_length = max(min_length, self.settings["params_astar"]["planning_horizon"])
-        min_length += self.settings["params_astar"]["planning_horizon_buffer"] # 20 buffer
+        min_length += self.settings["params_astar"][
+            "planning_horizon_buffer"
+        ]  # 20 buffer
         return min_length
 
     def handle_agents_route_planning_centralized(self) -> None:
@@ -271,7 +273,7 @@ class Environment:
                 continue
             if len(agent.route) > 0:
                 continue
-            
+
             # try for this agent to plan, given the restrictions it step by step considers
             planning_finished: bool = False
             agents_considered: List[Agent] = []
