@@ -128,6 +128,14 @@ class Agent:
         if self.assigned_task is None:
             raise ValueError("Cannot compute minimum task time without assigned task.")
 
+        # This is an evaluation-only shortest path estimate, so it should not be
+        # capped by the online planning horizon used for rolling reservation-based
+        # replanning.
+        evaluation_horizon = max(
+            self.environment.settings["params_astar"]["planning_horizon"],
+            4 * (self.grid.grid_size ** 2),
+        )
+
         path = self.path_planner.astar(
             start=(
                 self.current_position[0],
@@ -137,6 +145,7 @@ class Agent:
             goal=(self.assigned_task.to_position[0], self.assigned_task.to_position[1]),
             dynamic_occupancy=None,
             ignore_counter=True,  # do not increment the AStarPathPlanner.COUNTER for evaluation-only shortest path calculation
+            planning_horizon=evaluation_horizon,
         )
 
         if path:
@@ -295,7 +304,7 @@ class Agent:
         # determine dynamic_occupancy_grid given all already planned routes
         dynamic_occupancy_grid = GridTools.create_dynamic_occupancy_grid(
             environment=self.environment,
-            time_horizon=self.environment.settings["params_astar"]["planning_horizon"],
+            time_horizon=self.environment.get_sufficient_planning_horizon(),
             agent_list=self.environment.agents,
             tabu_agent=self,
         )
@@ -314,7 +323,7 @@ class Agent:
         # determine dynamic_occupancy_grid given all already planned routes
         dynamic_occupancy_grid = GridTools.create_dynamic_occupancy_grid(
             environment=self.environment,
-            time_horizon=self.environment.settings["params_astar"]["planning_horizon"],
+            time_horizon=self.environment.get_sufficient_planning_horizon(),
             agent_list=self.environment.agents,
             tabu_agent=self,
         )

@@ -43,12 +43,13 @@ class AStarPathPlanner:
         self,
         goal_state: PathPlannerState,
         dynamic_occupancy: Optional[NDArray[np.bool_]],
+        planning_horizon: int,
     ) -> bool:
         if dynamic_occupancy is None:
             return True
 
         latest_known_time = min(
-            self.astar_params["planning_horizon"],
+            planning_horizon,
             dynamic_occupancy.shape[0] - 1,
         )
         for t in range(goal_state.t, latest_known_time + 1):
@@ -62,6 +63,7 @@ class AStarPathPlanner:
         goal: Tuple[int, int],
         dynamic_occupancy: Optional[NDArray[np.bool_]] = None,
         ignore_counter: bool = False,
+        planning_horizon: Optional[int] = None,
     ) -> Optional[List[PathPlannerState]]:
         """
         This is the implementation of a astar algorithm for a robot that needs
@@ -74,6 +76,11 @@ class AStarPathPlanner:
         max_time_horizon: optional maximum time to consider
         ignore_counter: if True, do not increment the AStarPathPlanner.COUNTER (used for shortest possible path calculation for evaluation only)
         """
+        effective_planning_horizon = (
+            self.astar_params["planning_horizon"]
+            if planning_horizon is None
+            else planning_horizon
+        )
         open_list: List[Tuple[int, PathPlannerState, List[PathPlannerState]]] = []
         visited: Set[Tuple[int, int, int, int]] = set()
         steps: int = 0
@@ -106,12 +113,14 @@ class AStarPathPlanner:
             # ABORT CONDITION: FOUND GOAL
             if (state.x, state.y) == goal:
                 hit_the_goal = True
-            if hit_the_goal and self.goal_remains_free(state, dynamic_occupancy):
+            if hit_the_goal and self.goal_remains_free(
+                state, dynamic_occupancy, effective_planning_horizon
+            ):
                 return new_path
 
             # EXPLORE
             next_t: int = state.t + 1
-            if next_t > self.astar_params["planning_horizon"]:
+            if next_t > effective_planning_horizon:
                 continue
 
             # BRANCH 1: ACTION: WAIT

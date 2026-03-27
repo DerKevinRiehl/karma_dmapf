@@ -176,6 +176,14 @@ class Environment:
                 return agent
         return None
 
+    def get_sufficient_planning_horizon(self):
+        min_length = 0
+        for agent in self.agents:
+            min_length = max(min_length, len(agent.route))
+        min_length = max(min_length, self.settings["params_astar"]["planning_horizon"])
+        min_length += self.settings["params_astar"]["planning_horizon_buffer"] # 20 buffer
+        return min_length
+
     def handle_agents_route_planning_centralized(self) -> None:
         """
         This works as follows: centralised planning according to CBS, meaning optimization on joint state space.
@@ -214,9 +222,6 @@ class Environment:
                 raise Exception(
                     "Centralized planning failed to find a solution, consider adjusting parameters or using a different controller."
                 )
-                # self.handle_agents_route_planning_decentralized_negotiate(
-                #     NegotiationStrategy.negotiate_altruistic
-                # )
 
     def handle_agents_route_planning_decentralized_respect(self) -> None:
         """
@@ -290,7 +295,7 @@ class Environment:
                 # determine shortest path (given considered restrictions)
                 dynamic_occupancy_grid = GridTools.create_dynamic_occupancy_grid(
                     environment=self,
-                    time_horizon=self.settings["params_astar"]["planning_horizon"],
+                    time_horizon=self.get_sufficient_planning_horizon(),
                     agent_list=agents_considered,
                     tabu_agent=agent,
                 )
