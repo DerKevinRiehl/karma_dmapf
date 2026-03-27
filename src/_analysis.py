@@ -10,6 +10,10 @@ interesting repo: https://github.com/GavinPHR/Multi-Agent-Path-Finding?tab=readm
 ###############################################################################
 import numpy as np
 import os
+import json
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 from environment import Environment
 from planner_path_astar import AStarPathPlanner
 
@@ -103,6 +107,120 @@ def get_markdown_table_str(title, data, algorithms, agents):
 
 def print_markdown_table(title, data, algorithms, agents):
     print(get_markdown_table_str(title, data, algorithms, agents))
+
+
+def plot_metric(
+    metric_name,
+    data,
+    grid_size,
+    agents,
+    controllers,
+    output_dir="results/figs",
+):
+    """
+    Plots a given metric for different algorithms using different plot types.
+    """
+    # Line plot for mean and std
+    _plot_line(metric_name, data, grid_size, agents, controllers, output_dir)
+    # Box plot for distribution
+    _plot_box(metric_name, data, grid_size, agents, controllers, output_dir)
+
+
+def _plot_line(
+    metric_name, data, grid_size, agents, controllers, output_dir="results/figs"
+):
+    plt.style.use("seaborn-v0_8-paper")
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    for controller in controllers:
+        means = [
+            data[grid_size][controller][n_agent][metric_name][0]
+            for n_agent in agents
+            if n_agent in data[grid_size][controller]
+        ]
+        stds = [
+            data[grid_size][controller][n_agent][metric_name][1]
+            for n_agent in agents
+            if n_agent in data[grid_size][controller]
+        ]
+
+        valid_agents = [
+            n_agent for n_agent in agents if n_agent in data[grid_size][controller]
+        ]
+
+        ax.plot(
+            valid_agents, means, marker="o", linestyle="-", label=f"{controller} (Mean)"
+        )
+        ax.fill_between(
+            valid_agents,
+            np.array(means) - np.array(stds),
+            np.array(means) + np.array(stds),
+            alpha=0.2,
+        )
+
+    ax.set_xlabel("Number of Agents", fontsize=14)
+    ax.set_ylabel(metric_name, fontsize=14)
+    ax.set_title(
+        f"Mean {metric_name} vs. Number of Agents (Grid Size: {grid_size})",
+        fontsize=16,
+    )
+    ax.legend(fontsize=12)
+    ax.tick_params(axis="both", which="major", labelsize=12)
+    ax.grid(True)
+
+    filename = f"line_{metric_name.replace(' ', '_').replace('%', 'perc')}_vs_agents_grid_{grid_size}.pdf"
+    filepath = os.path.join(output_dir, filename)
+    plt.savefig(filepath, format="pdf", bbox_inches="tight", dpi=300)
+    plt.close(fig)
+    print(f"Saved plot: {filepath}")
+
+
+def _plot_box(
+    metric_name, data, grid_size, agents, controllers, output_dir="results/figs"
+):
+    plt.style.use("seaborn-v0_8-paper")
+    fig, ax = plt.subplots(figsize=(16, 8))
+
+    plot_data = []
+    for n_agent in agents:
+        for controller in controllers:
+            if (
+                "raw_data" in data[grid_size][controller]
+                and n_agent in data[grid_size][controller]["raw_data"]
+                and metric_name in data[grid_size][controller]["raw_data"][n_agent]
+            ):
+                raw_values = data[grid_size][controller]["raw_data"][n_agent][
+                    metric_name
+                ]
+                for val in raw_values:
+                    plot_data.append(
+                        {"Agents": n_agent, "Controller": controller, "Value": val}
+                    )
+
+    if not plot_data:
+        print(f"No raw data to plot for {metric_name} (box plot).")
+        plt.close(fig)
+        return
+
+    df = pd.DataFrame(plot_data)
+
+    sns.boxplot(x="Agents", y="Value", hue="Controller", data=df, ax=ax)
+
+    ax.set_xlabel("Number of Agents", fontsize=14)
+    ax.set_ylabel(metric_name, fontsize=14)
+    ax.set_title(
+        f"Distribution of {metric_name} vs. Number of Agents (Grid Size: {grid_size})",
+        fontsize=16,
+    )
+    ax.legend(fontsize=12)
+    ax.tick_params(axis="both", which="major", labelsize=12)
+    ax.grid(True)
+
+    filename = f"box_{metric_name.replace(' ', '_').replace('%', 'perc')}_vs_agents_grid_{grid_size}.pdf"
+    filepath = os.path.join(output_dir, filename)
+    plt.savefig(filepath, format="pdf", bbox_inches="tight", dpi=300)
+    plt.close(fig)
+    print(f"Saved plot: {filepath}")
 
 
 random_seeds = range(41, 51)
@@ -448,6 +566,43 @@ for grid_size in grid_sizes:
                 iqr_avg_inc_per_agent,
             ) = summarize(n_avg_service_increase_per_agent_list)
 
+            # Store raw data for box plots
+            if "raw_data" not in results_summary[grid_size][controller]:
+                results_summary[grid_size][controller]["raw_data"] = {}
+            if n_agent not in results_summary[grid_size][controller]["raw_data"]:
+                results_summary[grid_size][controller]["raw_data"][n_agent] = {}
+
+            raw_data_storage = results_summary[grid_size][controller]["raw_data"][
+                n_agent
+            ]
+            raw_data_storage["A* Calls"] = astar_calls_list
+            raw_data_storage["Completed Tasks"] = n_completed_tasks_list
+            raw_data_storage["Total Task Time (incl. Reallocation) (all agents)"] = (
+                n_total_task_time_list
+            )
+            raw_data_storage["Avg Task Time (incl. Reallocation) (all agents)"] = (
+                n_average_task_time_list
+            )
+            raw_data_storage["Std Task Time (incl. Reallocation) (all agents)"] = (
+                n_std_task_time_list
+            )
+            raw_data_storage["Total Service Time (all agents)"] = (
+                n_total_service_time_list
+            )
+            raw_data_storage["Avg Service Time (all agents)"] = (
+                n_average_service_time_list
+            )
+            raw_data_storage["Std Service Time (all agents)"] = n_std_service_time_list
+            raw_data_storage["Avg Service Time Increase (%) (all agents)"] = (
+                n_average_service_increase_list
+            )
+            raw_data_storage["Avg Service Time (per agent mean)"] = (
+                n_avg_service_time_per_agent_list
+            )
+            raw_data_storage["Avg Service Increase (%) (per agent mean)"] = (
+                n_avg_service_increase_per_agent_list
+            )
+
             metrics = {
                 "A* Calls": (
                     avg_astar,
@@ -687,3 +842,70 @@ for grid_size in grid_sizes:
             )
             print(table_str)
             f_summary.write(table_str + "\n")
+
+    # Save the results_summary to a JSON file for plotting
+    # Convert keys to strings for JSON compatibility
+    results_summary_str_keys = {}
+    for k, v in results_summary.items():
+        grid_size_key = str(k)
+        results_summary_str_keys[grid_size_key] = {}
+        for controller, controller_data in v.items():
+            controller_key = str(controller)
+            results_summary_str_keys[grid_size_key][controller_key] = {}
+            for n_agent, agent_data in controller_data.items():
+                agent_key = str(n_agent)
+                results_summary_str_keys[grid_size_key][controller_key][
+                    agent_key
+                ] = agent_data
+
+    with open("results/summary.json", "w") as f_json:
+        # Custom encoder to handle numpy arrays
+        class NumpyEncoder(json.JSONEncoder):
+            def default(self, o):
+                if isinstance(o, np.ndarray):
+                    return o.tolist()
+                if isinstance(o, np.integer):
+                    return int(o)
+                if isinstance(o, np.floating):
+                    return float(o)
+                return json.JSONEncoder.default(self, o)
+
+        json.dump(results_summary_str_keys, f_json, indent=4, cls=NumpyEncoder)
+
+    # Plotting results
+    for grid_size_str, grid_data in results_summary_str_keys.items():
+        grid_size = int(grid_size_str)
+        controllers = [c for c in grid_data.keys() if c != "raw_data"]
+
+        # Determine the union of agents for this grid size
+        all_agents = set()
+        for controller in controllers:
+            all_agents.update(grid_data[controller].keys())
+
+        # Convert agent keys from string to int and sort
+        agents = sorted([int(a) for a in all_agents if a.isdigit()])
+
+        # Get all metric names from the first available data point
+        metric_names = []
+        if controllers and agents:
+            first_controller = controllers[0]
+            first_agent_str = str(agents[0])
+            if first_agent_str in grid_data[first_controller]:
+                metric_names = [
+                    k
+                    for k in grid_data[first_controller][first_agent_str].keys()
+                    if k != "raw_data"
+                ]
+
+        if not metric_names:
+            print(f"No metrics found for grid size {grid_size}. Skipping.")
+            continue
+
+        for metric_name in metric_names:
+            plot_metric(
+                metric_name,
+                results_summary,
+                grid_size,
+                agents,
+                controllers,
+            )
