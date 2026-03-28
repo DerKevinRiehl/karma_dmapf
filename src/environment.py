@@ -303,7 +303,7 @@ class Environment:
                         len(agents_considered),
                     )
                 # determine shortest path (given considered restrictions)
-                dynamic_occupancy_grid = GridTools.create_dynamic_occupancy_grid(
+                reservation_grid = GridTools.create_3D_reservation_grid(
                     environment=self,
                     time_horizon=self.get_sufficient_planning_horizon(),
                     agent_list=agents_considered,
@@ -321,7 +321,7 @@ class Environment:
                         agent.current_orientation,
                     ),
                     goal=(agent.target_position[0], agent.target_position[1]),
-                    dynamic_occupancy=dynamic_occupancy_grid,
+                    reservation_grid=reservation_grid,
                 )
 
                 # if cannot plan, just abort for now

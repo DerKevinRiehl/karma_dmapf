@@ -142,7 +142,7 @@ class Agent:
                 self.current_orientation,
             ),
             goal=(self.assigned_task.to_position[0], self.assigned_task.to_position[1]),
-            dynamic_occupancy=None,
+            reservation_grid=None,
             ignore_counter=True,  # do not increment the AStarPathPlanner.COUNTER for evaluation-only shortest path calculation
             planning_horizon=evaluation_horizon,
         )
@@ -227,7 +227,7 @@ class Agent:
             self.current_orientation = AGENT_ORIENTATION_WEST
 
     def _determine_intersection_free_path(
-        self, dynamic_occupancy_grid: NDArray[np.bool_]
+        self, reservation_grid: NDArray[np.int_]
     ) -> Optional[List["PathPlannerState"]]:
         if not self.target_position:
             return None
@@ -239,12 +239,12 @@ class Agent:
                 self.current_orientation,
             ),
             goal=(self.target_position[0], self.target_position[1]),
-            dynamic_occupancy=dynamic_occupancy_grid,
+            reservation_grid=reservation_grid,
         )
         return path
 
     def _determine_idle_parking_path(
-        self, dynamic_occupancy_grid: NDArray[np.bool_]
+        self, reservation_grid: NDArray[np.int_]
     ) -> Optional[List["PathPlannerState"]]:
         x0, y0 = self.current_position
 
@@ -269,14 +269,14 @@ class Agent:
                     continue
 
                 if (
-                    probe_pos_x >= dynamic_occupancy_grid.shape[1]
-                    or probe_pos_y >= dynamic_occupancy_grid.shape[2]
+                    probe_pos_x >= reservation_grid.shape[1]
+                    or probe_pos_y >= reservation_grid.shape[2]
                 ):
                     continue
 
                 # cell must be free at all times in the horizon
-                # dynamic_occupancy_grid[:, x, y] is a 1D boolean array over time
-                if not dynamic_occupancy_grid[:, probe_pos_x, probe_pos_y].any():
+                column = reservation_grid[:, probe_pos_x, probe_pos_y]
+                if np.equal(column, -1).all():
                     target_candidates.append([probe_pos_x, probe_pos_y])
 
         # sort them closest to origin (self.current_position)
@@ -292,7 +292,7 @@ class Agent:
                     self.current_orientation,
                 ),
                 goal=(target_candidate[0], target_candidate[1]),
-                dynamic_occupancy=dynamic_occupancy_grid,
+                reservation_grid=reservation_grid,
             )
             if path is not None:
                 return path
@@ -300,8 +300,8 @@ class Agent:
         return None
 
     def plan_route_decentralized_respectful(self) -> None:
-        # determine dynamic_occupancy_grid given all already planned routes
-        dynamic_occupancy_grid = GridTools.create_dynamic_occupancy_grid(
+        # determine reservation_grid given all already planned routes
+        reservation_grid = GridTools.create_3D_reservation_grid(
             environment=self.environment,
             time_horizon=self.environment.get_sufficient_planning_horizon(),
             agent_list=self.environment.agents,
@@ -309,7 +309,7 @@ class Agent:
         )
 
         # determine possible, intersection free path
-        path = self._determine_intersection_free_path(dynamic_occupancy_grid)
+        path = self._determine_intersection_free_path(reservation_grid)
         if path is not None:
             route = self.path_planner.convert_path_to_route(path)
             self.route = route if route is not None else []
@@ -319,26 +319,25 @@ class Agent:
     ) -> Tuple[int, Optional[List["PathPlannerState"]]]:
         current_cost = len(self.route)
 
-        # determine dynamic_occupancy_grid given all already planned routes
-        dynamic_occupancy_grid = GridTools.create_dynamic_occupancy_grid(
+        # determine reservation_grid given all already planned routes
+        reservation_grid = GridTools.create_3D_reservation_grid(
             environment=self.environment,
             time_horizon=self.environment.get_sufficient_planning_horizon(),
             agent_list=self.environment.agents,
             tabu_agent=self,
         )
 
-        # add to_avoid_path to dynamic_occupancy grid
+        # add to_avoid_path to reservation grid
         for state in to_avoid_path:
-            if state.t < dynamic_occupancy_grid.shape[0]:
-                dynamic_occupancy_grid[state.t][state.x][state.y] = True
+            if state.t < reservation_grid.shape[0]:
+                # mark with this agent's id to block reuse; id is int, -1 means free elsewhere
+                reservation_grid[state.t][state.x][state.y] = self.id
 
         # if you have a target
         changed_path: Optional[List["PathPlannerState"]] = None
         if len(self.target_position) > 0:
             # determine possible, intersection free path
-            changed_path = self._determine_intersection_free_path(
-                dynamic_occupancy_grid
-            )
+            changed_path = self._determine_intersection_free_path(reservation_grid)
             if changed_path is not None:
                 changed_route = self.path_planner.convert_path_to_route(changed_path)
                 changed_cost = len(changed_route if changed_route else [])
@@ -347,7 +346,7 @@ class Agent:
                 return 1000, changed_path
         else:
             # determine if there is any free position nearby to idle parking
-            changed_path = self._determine_idle_parking_path(dynamic_occupancy_grid)
+            changed_path = self._determine_idle_parking_path(reservation_grid)
             return 1000, changed_path
 
     def change_path_to_satisfy(self, change_to_path: List["PathPlannerState"]) -> None:

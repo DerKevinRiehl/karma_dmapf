@@ -36,31 +36,16 @@ class GridTools:
         return path[-1]
 
     @staticmethod
-    def create_dynamic_occupancy_grid(
-        environment: Environment,
-        time_horizon: int,
-        agent_list: Optional[List[Agent]] = None,
-        tabu_agent: Optional[Agent] = None,
-    ) -> NDArray[np.bool_]:
-        reservation_grid = GridTools.create_3D_reservation_grid(
-            environment,
-            time_horizon,
-            agent_list,
-            tabu_agent,
-        )
-        dynamic_occupancy: NDArray[np.bool_] = reservation_grid != 0
-        return dynamic_occupancy
-
-    @staticmethod
     def create_3D_reservation_grid(
         environment: Environment,
         time_horizon: int,
         agent_list: Optional[List[Agent]] = None,
         tabu_agent: Optional[Agent] = None,
     ) -> NDArray[np.int_]:
-        """Create a 3D reservation table (time,x,y)."""
-        reservation_table: NDArray[np.int_] = np.zeros(
+        """Create a 3D reservation table (time,x,y) storing agent ids; -1 means free."""
+        reservation_table: NDArray[np.int_] = np.full(
             (time_horizon + 1, environment.grid.grid_size, environment.grid.grid_size),
+            -1,
             dtype=int,
         )
 

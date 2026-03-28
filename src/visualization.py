@@ -372,7 +372,8 @@ def plot_environment_and_reservation(environment, save_filename=None):
     rt = GridTools.create_3D_reservation_grid(
         environment, environment.settings["time_horizon_visualization"]
     )
-    t_idx, x_idx, y_idx = np.where(rt > 0)
+    occupied_mask = np.not_equal(rt, -1)
+    t_idx, x_idx, y_idx = np.where(occupied_mask)
     agent_ids = rt[t_idx, x_idx, y_idx]
     unique_agents = np.unique(agent_ids)
     colors = cm.get_cmap("tab20", len(unique_agents))

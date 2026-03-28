@@ -62,18 +62,18 @@ class AStarPathPlanner:
     def goal_remains_free(
         self,
         goal_state: PathPlannerState,
-        dynamic_occupancy: Optional[NDArray[np.bool_]],
+        reservation_grid: Optional[NDArray[np.int_]],
         planning_horizon: int,
     ) -> bool:
-        if dynamic_occupancy is None:
+        if reservation_grid is None:
             return True
 
         latest_known_time = min(
             planning_horizon,
-            dynamic_occupancy.shape[0] - 1,
+            reservation_grid.shape[0] - 1,
         )
         for t in range(goal_state.t, latest_known_time + 1):
-            if dynamic_occupancy[t, goal_state.x, goal_state.y]:
+            if reservation_grid[t, goal_state.x, goal_state.y] != -1:
                 return False
         return True
 
@@ -81,18 +81,18 @@ class AStarPathPlanner:
         self,
         start: Tuple[int, int, int],
         goal: Tuple[int, int],
-        dynamic_occupancy: Optional[NDArray[np.bool_]] = None,
+        reservation_grid: Optional[NDArray[np.int_]] = None,
         ignore_counter: bool = False,
         planning_horizon: Optional[int] = None,
     ) -> Optional[List[PathPlannerState]]:
         """
         This is the implementation of a astar algorithm for a robot that needs
         to rotate into the direction of travel, and can wait.
-        It considers obstables from a static_occupancy and dynamic_occupancy map.
+        It considers obstables from a static_occupancy map and a reservation grid.
 
         start: (x, y, theta)
         goal: (x, y)
-        dynamic_occupancy: 3D occupancy grid [time, x, y]
+        reservation_grid: 3D reservation grid [time, x, y] storing agent ids (-1 means free)
         max_time_horizon: optional maximum time to consider
         ignore_counter: if True, do not increment the AStarPathPlanner.COUNTER (used for shortest possible path calculation for evaluation only)
         """
@@ -101,13 +101,13 @@ class AStarPathPlanner:
             if planning_horizon is None
             else planning_horizon
         )
-        dynamic_horizon: Optional[int] = None
-        if dynamic_occupancy is not None:
-            if dynamic_occupancy.shape[0] == 0:
+        reservation_horizon: Optional[int] = None
+        if reservation_grid is not None:
+            if reservation_grid.shape[0] == 0:
                 return None
-            dynamic_horizon = dynamic_occupancy.shape[0] - 1
+            reservation_horizon = reservation_grid.shape[0] - 1
             effective_planning_horizon = min(
-                effective_planning_horizon, dynamic_horizon
+                effective_planning_horizon, reservation_horizon
             )
         open_list: List[Tuple[int, PathPlannerState, List[PathPlannerState]]] = []
         visited: Set[Tuple[int, int, int, int]] = set()
@@ -133,16 +133,16 @@ class AStarPathPlanner:
             visited.add(key)
             new_path: List[PathPlannerState] = path + [state]
 
-            if dynamic_occupancy is not None:
+            if reservation_grid is not None:
                 if (
-                    state.t < dynamic_occupancy.shape[0]
-                    and dynamic_occupancy[state.t, state.x, state.y]
+                    state.t < reservation_grid.shape[0]
+                    and reservation_grid[state.t, state.x, state.y] != -1
                 ):
                     continue
 
             # ABORT CONDITION: FOUND GOAL
             if state.goal_reached and self.goal_remains_free(
-                state, dynamic_occupancy, effective_planning_horizon
+                state, reservation_grid, effective_planning_horizon
             ):
                 return new_path
 
@@ -152,9 +152,9 @@ class AStarPathPlanner:
                 continue
 
             # BRANCH 1: ACTION: WAIT
-            if dynamic_occupancy is None or (
-                next_t < dynamic_occupancy.shape[0]
-                and not dynamic_occupancy[next_t, state.x, state.y]
+            if reservation_grid is None or (
+                next_t < reservation_grid.shape[0]
+                and reservation_grid[next_t, state.x, state.y] == -1
             ):
                 heapq.heappush(
                     open_list,
@@ -173,9 +173,9 @@ class AStarPathPlanner:
                 )
 
             # BRANCH 2: ACTION: ROTATE (turn left/right)
-            if dynamic_occupancy is None or (
-                next_t < dynamic_occupancy.shape[0]
-                and not dynamic_occupancy[next_t, state.x, state.y]
+            if reservation_grid is None or (
+                next_t < reservation_grid.shape[0]
+                and reservation_grid[next_t, state.x, state.y] == -1
             ):
                 heapq.heappush(
                     open_list,
@@ -216,13 +216,15 @@ class AStarPathPlanner:
                 and 0 <= ny < self.static_occupancy_grid.shape[1]
             ):
                 if self.static_occupancy_grid[nx, ny] == 0:
-                    if dynamic_occupancy is None or (
-                        next_t < dynamic_occupancy.shape[0]
-                        and not dynamic_occupancy[next_t, nx, ny]
+                    if reservation_grid is None or (
+                        next_t < reservation_grid.shape[0]
+                        and reservation_grid[next_t, nx, ny] == -1
                         and not (
-                            state.t < dynamic_occupancy.shape[0]
-                            and dynamic_occupancy[state.t, nx, ny]
-                            and dynamic_occupancy[next_t, state.x, state.y]
+                            state.t < reservation_grid.shape[0]
+                            and reservation_grid[state.t, nx, ny] != -1
+                            and reservation_grid[next_t, state.x, state.y] != -1
+                            and reservation_grid[state.t, nx, ny]
+                            == reservation_grid[next_t, state.x, state.y]
                         )
                     ):
                         heapq.heappush(

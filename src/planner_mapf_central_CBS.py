@@ -134,26 +134,27 @@ class Planner_CBS:
     def compute_cost(self, paths: List[List[PathPlannerState]]) -> int:
         return sum(len(p) for p in paths)
 
-    def get_dynamic_occupancy_grid(
+    def get_reservation_grid(
         self, constraints: List[CBS_Constraint], agent: int
-    ) -> NDArray[np.bool_]:
-        dynamic_occupancy: NDArray[np.bool_] = np.zeros(
+    ) -> NDArray[np.int_]:
+        reservation_grid: NDArray[np.int_] = np.full(
             (
                 self.astar_planner.astar_params["planning_horizon"] + 1,
                 self.grid.shape[0],
                 self.grid.shape[1],
             ),
-            dtype=bool,
+            -1,
+            dtype=int,
         )
 
         for c in constraints:
             if c.agent == agent:
-                dynamic_occupancy[c.t, c.x, c.y] = True
+                reservation_grid[c.t, c.x, c.y] = c.agent
                 # note: do not automatically block c.t+1 here — constraints are per-agent and
                 # the CBS branching creates explicit constraints for the other agent at t+1 when
                 # a "just-vacated" conflict is detected. Blocking c.t+1 here would over-constrain.
 
-        return dynamic_occupancy
+        return reservation_grid
 
     def astar_launcher(
         self,
@@ -162,10 +163,10 @@ class Planner_CBS:
         agent: int,
         constraints: List[CBS_Constraint],
     ) -> Optional[List[PathPlannerState]]:
-        # Build occupancy grid from constraints
-        dynamic_occupancy = self.get_dynamic_occupancy_grid(constraints, agent)
+        # Build reservation grid from constraints
+        reservation_grid = self.get_reservation_grid(constraints, agent)
         return self.astar_planner.astar(
-            start=start, goal=goal, dynamic_occupancy=dynamic_occupancy
+            start=start, goal=goal, reservation_grid=reservation_grid
         )
 
     def plan_cbs(
