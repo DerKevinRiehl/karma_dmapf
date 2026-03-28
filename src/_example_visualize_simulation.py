@@ -63,11 +63,11 @@ def check_violation(environment, previous_positions=None):
     for i, agent_a in enumerate(environment.agents):
         for agent_b in environment.agents[i + 1 :]:
             if tuple(agent_a.current_position) == tuple(agent_b.current_position):
-                print(
+                raise Exception(
                     f"[{environment.time}] Vertex conflict: agents {agent_a.id} and {agent_b.id} "
                     f"at {agent_a.current_position}"
                 )
-                return True
+
     # edge conflicts
     if previous_positions is not None:
         for i, agent_a in enumerate(environment.agents):
@@ -78,12 +78,10 @@ def check_violation(environment, previous_positions=None):
                 curr_b = tuple(agent_b.current_position)
 
                 if prev_a == curr_b and prev_b == curr_a and curr_a != curr_b:
-                    print(
+                    raise Exception(
                         f"[{environment.time}] Edge conflict: agents {agent_a.id} and {agent_b.id} "
                         f"swapped {prev_a} <-> {prev_b}"
                     )
-                    return True
-    return False
 
 
 ###############################################################################

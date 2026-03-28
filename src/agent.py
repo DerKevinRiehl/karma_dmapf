@@ -62,7 +62,6 @@ class Agent:
         self.assigned_task = None
         self.status = AGENT_STATUS_IDLE
         self.target_position = []
-        self.route = []
 
     def assign_task(self, task: "Task", time: int) -> None:
         self.assigned_task = task
