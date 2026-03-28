@@ -332,12 +332,6 @@ class Agent:
             if state.t < dynamic_occupancy_grid.shape[0]:
                 dynamic_occupancy_grid[state.t][state.x][state.y] = True
 
-            # Mirror the "Just vacated" reservation-table behavior for temporary avoidance paths:
-            # block the cell for one extra timestep so a negotiating agent cannot
-            # resolve a conflict by performing an immediate edge swap.
-            if state.t + 1 < dynamic_occupancy_grid.shape[0]:
-                dynamic_occupancy_grid[state.t + 1][state.x][state.y] = True
-
         # if you have a target
         changed_path: Optional[List["PathPlannerState"]] = None
         if len(self.target_position) > 0:

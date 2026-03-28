@@ -101,6 +101,14 @@ class AStarPathPlanner:
             if planning_horizon is None
             else planning_horizon
         )
+        dynamic_horizon: Optional[int] = None
+        if dynamic_occupancy is not None:
+            if dynamic_occupancy.shape[0] == 0:
+                return None
+            dynamic_horizon = dynamic_occupancy.shape[0] - 1
+            effective_planning_horizon = min(
+                effective_planning_horizon, dynamic_horizon
+            )
         open_list: List[Tuple[int, PathPlannerState, List[PathPlannerState]]] = []
         visited: Set[Tuple[int, int, int, int]] = set()
         steps: int = 0
@@ -144,9 +152,9 @@ class AStarPathPlanner:
                 continue
 
             # BRANCH 1: ACTION: WAIT
-            if (
-                dynamic_occupancy is None
-                or not dynamic_occupancy[next_t, state.x, state.y]
+            if dynamic_occupancy is None or (
+                next_t < dynamic_occupancy.shape[0]
+                and not dynamic_occupancy[next_t, state.x, state.y]
             ):
                 heapq.heappush(
                     open_list,
@@ -165,9 +173,9 @@ class AStarPathPlanner:
                 )
 
             # BRANCH 2: ACTION: ROTATE (turn left/right)
-            if (
-                dynamic_occupancy is None
-                or not dynamic_occupancy[next_t, state.x, state.y]
+            if dynamic_occupancy is None or (
+                next_t < dynamic_occupancy.shape[0]
+                and not dynamic_occupancy[next_t, state.x, state.y]
             ):
                 heapq.heappush(
                     open_list,
@@ -208,9 +216,14 @@ class AStarPathPlanner:
                 and 0 <= ny < self.static_occupancy_grid.shape[1]
             ):
                 if self.static_occupancy_grid[nx, ny] == 0:
-                    if (
-                        dynamic_occupancy is None
-                        or not dynamic_occupancy[next_t, nx, ny]
+                    if dynamic_occupancy is None or (
+                        next_t < dynamic_occupancy.shape[0]
+                        and not dynamic_occupancy[next_t, nx, ny]
+                        and not (
+                            state.t < dynamic_occupancy.shape[0]
+                            and dynamic_occupancy[state.t, nx, ny]
+                            and dynamic_occupancy[next_t, state.x, state.y]
+                        )
                     ):
                         heapq.heappush(
                             open_list,
