@@ -120,6 +120,8 @@ def plot_metric(
     """
     Plots a given metric for different algorithms using different plot types.
     """
+    # create the output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
     # Line plot for mean and std
     _plot_line(metric_name, data, grid_size, agents, controllers, output_dir)
     # Box plot for distribution
