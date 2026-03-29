@@ -357,7 +357,8 @@ class Environment:
                 # try to resolve conflicts with everyone
                 all_conflicts_resolved: bool = True
                 route_snapshot: Dict[int, List[str]] = {
-                    other_agent.id: other_agent.route.copy() for other_agent in self.agents
+                    other_agent.id: other_agent.route.copy()
+                    for other_agent in self.agents
                 }
                 karma_snapshot: Dict[int, int] = {
                     other_agent.id: other_agent.karma_balance
