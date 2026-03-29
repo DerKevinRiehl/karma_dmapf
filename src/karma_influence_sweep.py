@@ -10,11 +10,11 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import multiprocessing
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
 
@@ -43,15 +43,16 @@ AGENTS_BY_GRID: Dict[int, List[int]] = {
     5: [8, 12, 16],
 }
 AGENT_COUNTS = AGENTS_BY_GRID[GRID_SIZE_BASE]
-RANDOM_SEEDS = [41, 42]
+RANDOM_SEEDS = [41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
 KARMA_INFLUENCES = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 DELTA_THRESHOLDS = [0.5, 1.5]
-RECOMPUTE_RESULTS = False  # set to False to load cached CSV/JSON and skip reruns
+RECOMPUTE_RESULTS = True  # set to False to load cached CSV/JSON and skip reruns
 
 # Output locations
 OUTPUT_DIR = Path("results/karma_sweep")
 FIGS_DIR = OUTPUT_DIR / "figs"
 RUNS_JSON = OUTPUT_DIR / "runs.json"
+SEED_RESULTS_DIR = OUTPUT_DIR / "seed_runs"
 
 # Controllers under test
 ALL_CONTROLLERS = [
@@ -121,6 +122,45 @@ CONTROLLER_COMPARISON_METRICS = [
 
 def _sanitize_float(value: float) -> str:
     return str(value).replace(".", "p")
+
+
+def _run_seed_job(args: Tuple[str, float, float, int, int]) -> Dict[str, Any]:
+    controller, karma_influence, delta_threshold, n_agents, seed = args
+    settings = copy.deepcopy(BASE_SIMULATION_SETTINGS)
+    settings.update(
+        {
+            "random_seed": seed,
+            "grid_size": GRID_SIZE_BASE + 2,
+            "n_agents": n_agents,
+            "mapf_control": controller,
+        }
+    )
+    settings["params_karma"]["karma_influence"] = karma_influence
+    settings["params_karma"]["delta_threshold"] = delta_threshold
+    metrics = run_single_simulation(settings)
+    return {
+        "controller": controller,
+        "karma_influence": karma_influence,
+        "delta_threshold": delta_threshold,
+        "n_agents": n_agents,
+        "seed": seed,
+        "metrics": metrics,
+    }
+
+
+def _seed_result_path(result: Dict[str, Any]) -> Path:
+    fname = (
+        f"seed{result['seed']}_ctrl{result['controller']}_"
+        f"inf{_sanitize_float(result['karma_influence'])}_"
+        f"delta{_sanitize_float(result['delta_threshold'])}_"
+        f"agents{result['n_agents']}.json"
+    )
+    return SEED_RESULTS_DIR / fname
+
+
+def _save_seed_result(result: Dict[str, Any]) -> None:
+    SEED_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    _seed_result_path(result).write_text(json.dumps(result, indent=2))
 
 
 def run_single_simulation(simulation_settings: Dict[str, Any]) -> Dict[str, float]:
@@ -218,19 +258,73 @@ def load_cached_results() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     return summary_df, raw_df, run_df
 
 
+def combine_seed_results() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    files = sorted(SEED_RESULTS_DIR.glob("*.json"))
+    if not files:
+        raise FileNotFoundError("No per-seed result files found.")
+
+    raw_rows: List[Dict[str, Any]] = []
+    for path in files:
+        data = json.loads(path.read_text())
+        for metric_name, value in data["metrics"].items():
+            raw_rows.append(
+                {
+                    "controller": data["controller"],
+                    "karma_influence": data["karma_influence"],
+                    "delta_threshold": data["delta_threshold"],
+                    "n_agents": data["n_agents"],
+                    "metric": metric_name,
+                    "value": value,
+                    "seed": data["seed"],
+                }
+            )
+
+    raw_df = pd.DataFrame(raw_rows)
+    summary_rows: List[Dict[str, Any]] = []
+    for (controller, influence, delta, n_agents, metric), group in raw_df.groupby(
+        ["controller", "karma_influence", "delta_threshold", "n_agents", "metric"]
+    ):
+        stats = summarize(group["value"].tolist())
+        summary_rows.append(
+            {
+                "controller": controller,
+                "karma_influence": influence,
+                "delta_threshold": delta,
+                "n_agents": n_agents,
+                "metric": metric,
+                "mean": stats[0],
+                "std": stats[1],
+                "median": stats[2],
+                "gini": stats[3],
+                "iqr": stats[4],
+                "n_runs": len(group),
+            }
+        )
+
+    summary_df = pd.DataFrame(summary_rows)
+    summary_df = _add_controller_label(summary_df)
+    raw_df = _add_controller_label(raw_df)
+    run_df = pd.DataFrame()
+    return summary_df, raw_df, run_df
+
+
 def collect_results() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     FIGS_DIR.mkdir(parents=True, exist_ok=True)
+    SEED_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     if not RECOMPUTE_RESULTS:
         try:
             return load_cached_results()
         except FileNotFoundError:
-            logger.info("No cache found, recomputing results.")
+            try:
+                return combine_seed_results()
+            except FileNotFoundError:
+                logger.info("No cache found, recomputing results.")
 
-    summary_rows: List[Dict[str, Any]] = []
-    raw_rows: List[Dict[str, Any]] = []
-    run_rows: List[Dict[str, Any]] = []
+    # Recompute: clear old seed files
+    for old_file in SEED_RESULTS_DIR.glob("*.json"):
+        old_file.unlink()
 
     # Precompute total configs for progress logging
     total_configs = 0
@@ -243,113 +337,58 @@ def collect_results() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
             total_configs += len(AGENT_COUNTS)
 
     config_counter = 0
-
-    for controller in ALL_CONTROLLERS:
-        if controller in KARMA_CONTROLLERS:
-            param_grid = [
-                (influence, delta)
-                for influence in KARMA_INFLUENCES
-                for delta in DELTA_THRESHOLDS
-            ]
-        else:
-            param_grid = [
-                (
-                    BASE_SIMULATION_SETTINGS["params_karma"]["karma_influence"],
-                    BASE_SIMULATION_SETTINGS["params_karma"]["delta_threshold"],
-                )
-            ]
-
-        for n_agents in AGENT_COUNTS:
-            for influence, delta in param_grid:
-                config_counter += 1
-                logger.info(
-                    "[%d/%d] Config ctrl=%s agents=%d influence=%.2f delta=%.2f (seeds=%d)",
-                    config_counter,
-                    total_configs,
-                    controller,
-                    n_agents,
-                    influence,
-                    delta,
-                    len(RANDOM_SEEDS),
-                )
-                aggregated, raw_lists = run_configuration(
-                    controller=controller,
-                    karma_influence=influence,
-                    delta_threshold=delta,
-                    n_agents=n_agents,
-                    random_seeds=RANDOM_SEEDS,
-                )
-                logger.info(
-                    "Config done | ctrl=%s agents=%d influence=%.2f delta=%.2f | Completed mean=%.2f, Avg service mean=%.2f, Service increase mean=%.2f%%",
-                    controller,
-                    n_agents,
-                    influence,
-                    delta,
-                    aggregated.get("Completed Tasks", (0,))[0],
-                    aggregated.get("Avg Service Time (all agents)", (0,))[0],
-                    aggregated.get("Avg Service Time Increase (%) (all agents)", (0,))[
-                        0
-                    ],
-                )
-                # record aggregated
-                for metric_name, stats in aggregated.items():
-                    summary_rows.append(
-                        {
-                            "controller": controller,
-                            "karma_influence": influence,
-                            "delta_threshold": delta,
-                            "n_agents": n_agents,
-                            "metric": metric_name,
-                            "mean": stats[0],
-                            "std": stats[1],
-                            "median": stats[2],
-                            "gini": stats[3],
-                            "iqr": stats[4],
-                            "n_runs": len(raw_lists[metric_name]),
-                        }
+    pool_size = min(len(RANDOM_SEEDS), multiprocessing.cpu_count()) or 1
+    print(f"Starting simulations with pool size {pool_size}...")
+    with multiprocessing.Pool(processes=pool_size) as pool:
+        for controller in ALL_CONTROLLERS:
+            if controller in KARMA_CONTROLLERS:
+                param_grid = [
+                    (influence, delta)
+                    for influence in KARMA_INFLUENCES
+                    for delta in DELTA_THRESHOLDS
+                ]
+            else:
+                param_grid = [
+                    (
+                        BASE_SIMULATION_SETTINGS["params_karma"]["karma_influence"],
+                        BASE_SIMULATION_SETTINGS["params_karma"]["delta_threshold"],
                     )
-                # record raw per-seed
-                for metric_name, values in raw_lists.items():
-                    for value in values:
-                        raw_rows.append(
-                            {
-                                "controller": controller,
-                                "karma_influence": influence,
-                                "delta_threshold": delta,
-                                "n_agents": n_agents,
-                                "metric": metric_name,
-                                "value": value,
-                            }
-                        )
-                # per-config run summary for JSON
-                run_rows.append(
-                    {
-                        "controller": controller,
-                        "karma_influence": influence,
-                        "delta_threshold": delta,
-                        "n_agents": n_agents,
-                        "aggregated": aggregated,
-                        "raw": raw_lists,
-                    }
-                )
+                ]
 
-    summary_df = pd.DataFrame(summary_rows)
-    raw_df = pd.DataFrame(raw_rows)
+            for n_agents in AGENT_COUNTS:
+                for influence, delta in param_grid:
+                    config_counter += 1
+                    logger.info(
+                        "[%d/%d] Config ctrl=%s agents=%d influence=%.2f delta=%.2f (seeds=%d, pool=%d)",
+                        config_counter,
+                        total_configs,
+                        controller,
+                        n_agents,
+                        influence,
+                        delta,
+                        len(RANDOM_SEEDS),
+                        pool_size,
+                    )
+                    jobs = [
+                        (controller, influence, delta, n_agents, seed)
+                        for seed in RANDOM_SEEDS
+                    ]
+                    seed_results = pool.map(_run_seed_job, jobs)
+                    for res in seed_results:
+                        _save_seed_result(res)
+
+    summary_df, raw_df, run_df = combine_seed_results()
+
     summary_df.to_csv(OUTPUT_DIR / "summary.csv", index=False)
     raw_df.to_csv(OUTPUT_DIR / "raw_values.csv", index=False)
-
-    with open(OUTPUT_DIR / "summary.json", "w") as f:
-        json.dump(summary_rows, f, indent=2)
-    RUNS_JSON.write_text(json.dumps(run_rows, indent=2))
+    summary_df.to_json(OUTPUT_DIR / "summary.json", orient="records", indent=2)
+    RUNS_JSON.write_text(json.dumps([], indent=2))
 
     logger.info(
         "Finished all configurations. Summary rows: %d | Raw rows: %d",
-        len(summary_rows),
-        len(raw_rows),
+        len(summary_df),
+        len(raw_df),
     )
-    summary_df = _add_controller_label(summary_df)
-    raw_df = _add_controller_label(raw_df)
-    run_df = pd.DataFrame(run_rows)
     return summary_df, raw_df, run_df
 
 
