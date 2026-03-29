@@ -37,14 +37,18 @@ simulation_settings = {
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
     "time_horizon_visualization": 10,
     "time_simulation_duration": 1000,
-    "params_astar": {"max_iterations": 5000, "planning_horizon": 50},
+    "params_astar": {
+        "max_iterations": 5000,
+        "planning_horizon": int(20 * 20),
+        "planning_horizon_buffer": 20,
+    },
     "params_cbs": {
         "max_iterations": 5000,
         "MAX_IDLE_TIME_CONSIDERED": 5,
         "PLANNING_HORIZON": 100,
     },
     "params_karma": {
-        "initial_karma": 10,
+        "initial_karma": 0,
         "delta_threshold": 1,
         "karma_payment": 1,
         "karma_influence": 0.2,

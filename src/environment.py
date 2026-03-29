@@ -356,6 +356,14 @@ class Environment:
 
                 # try to resolve conflicts with everyone
                 all_conflicts_resolved: bool = True
+                route_snapshot: Dict[int, List[str]] = {
+                    other_agent.id: other_agent.route.copy() for other_agent in self.agents
+                }
+                karma_snapshot: Dict[int, int] = {
+                    other_agent.id: other_agent.karma_balance
+                    for other_agent in self.agents
+                }
+                negotiated_agents_in_iteration: List[Agent] = []
                 for conflict in conflicts:
                     if self.settings["debug_statements"]:
                         print("\tchecking the conflict", conflict)
@@ -409,7 +417,8 @@ class Environment:
                             conflicting_agent.change_path_to_satisfy(
                                 change_to_path=alternative_path_other
                             )
-                            agents_already_negotiated.append(conflicting_agent)
+                            if conflicting_agent not in negotiated_agents_in_iteration:
+                                negotiated_agents_in_iteration.append(conflicting_agent)
                         else:
                             all_conflicts_resolved = False
                             break
@@ -429,11 +438,19 @@ class Environment:
                         tabu_agent=agent,
                     )
                     if len(remaining_conflicts) == 0:
+                        for negotiated_agent in negotiated_agents_in_iteration:
+                            if negotiated_agent not in agents_already_negotiated:
+                                agents_already_negotiated.append(negotiated_agent)
                         planning_finished = True
                         break
 
                     all_conflicts_resolved = False
                     conflicts = remaining_conflicts
+
+                if not all_conflicts_resolved:
+                    for other_agent in self.agents:
+                        other_agent.route = route_snapshot[other_agent.id].copy()
+                        other_agent.karma_balance = karma_snapshot[other_agent.id]
 
                 # otherwise, didnt work out, so we have to add them into our agents_considered constraints
                 for conflict in conflicts:

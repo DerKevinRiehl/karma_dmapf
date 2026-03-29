@@ -28,12 +28,12 @@ from constants import (
 ###############################################################################
 simulation_settings = {
     "random_seed": 42,
-    "grid_size": 5 + 2,  # 15,
-    "n_agents": 10,
+    "grid_size": 20 + 2,  # 15,
+    "n_agents": 180,
     # "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
-    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
-    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
     "time_horizon_visualization": 10,
@@ -49,7 +49,7 @@ simulation_settings = {
         "PLANNING_HORIZON": 100,
     },
     "params_karma": {
-        "initial_karma": 10,
+        "initial_karma": 0,
         "delta_threshold": 1,
         "karma_payment": 1,
         "karma_influence": 0.2,
