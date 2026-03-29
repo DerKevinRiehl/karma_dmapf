@@ -19,6 +19,8 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC2,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC2,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
 )
@@ -28,8 +30,8 @@ from constants import (
 ###############################################################################
 simulation_settings = {
     "random_seed": 42,
-    "grid_size": 20 + 2,  # 15,
-    "n_agents": 180,
+    "grid_size": 5 + 2,  # 15,
+    "n_agents": 10,
     # "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
