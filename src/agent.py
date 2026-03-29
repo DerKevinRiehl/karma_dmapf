@@ -68,6 +68,8 @@ class Agent:
         self.minimal_path_cost = None
 
     def get_forecasted_path_total_cost(self):
+        if self.assigned_task is None:
+            return 0
         time_so_far = self.environment.time - self.assigned_task.spawned_time
         if self.status == AGENT_STATUS_CARRY:
             return time_so_far + len(self.route)
@@ -364,6 +366,8 @@ class Agent:
         if path is not None:
             route = self.path_planner.convert_path_to_route(path)
             self.route = route if route is not None else []
+        else:
+            self.route = []
 
     def determine_cost_to_change(
         self, to_avoid_path: List["PathPlannerState"]
