@@ -181,8 +181,8 @@ def run_single_simulation(simulation_settings: Dict[str, Any]) -> Dict[str, floa
                 break
         env.assign_open_tasks()
         env.close_finished_tasks()
-        n_astar_calls += AStarPathPlanner.COUNTER
-        AStarPathPlanner.COUNTER = 0
+        n_astar_calls += AStarPathPlanner.get_counter()
+        AStarPathPlanner.reset_counter()
 
     return compute_run_metrics(env.completed_tasks, n_astar_calls)
 

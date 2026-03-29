@@ -33,12 +33,14 @@ class Agent:
         self.environment: "Environment" = environment
         self.grid: "Grid" = self.environment.grid
 
-        pos = self.grid.get_random_empty_square()
+        pos = self.grid.get_random_empty_square(rng=self.environment.rng)
         if pos is None:
             raise ValueError("No empty square available for agent spawning.")
 
         self.current_position: List[int] = pos
-        self.current_orientation: int = np.random.choice(AGENT_ORIENTATIONS)
+        self.current_orientation: int = int(
+            self.environment.rng.choice(AGENT_ORIENTATIONS)
+        )
         self.assigned_task: Optional["Task"] = None
         self.status: int = AGENT_STATUS_IDLE
         self.route: List[str] = []

@@ -135,8 +135,8 @@ while environment.time < environment.settings["time_simulation_duration"]:
     check_violation(environment, previous_positions)
 
     # report A-STAR Calls
-    print("\tA-Star Calls:", AStarPathPlanner.COUNTER)
-    AStarPathPlanner.COUNTER = 0
+    print("\tA-Star Calls:", AStarPathPlanner.get_counter())
+    AStarPathPlanner.reset_counter()
 
 os.makedirs("results", exist_ok=True)
 make_gif(

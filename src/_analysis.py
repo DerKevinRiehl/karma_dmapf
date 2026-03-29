@@ -11,6 +11,7 @@ interesting repo: https://github.com/GavinPHR/Multi-Agent-Path-Finding?tab=readm
 import numpy as np
 import os
 import json
+from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -266,6 +267,54 @@ METRIC_NAMES = [
 with open("results/summary.txt", "w") as f:
     f.write("Summary of Results\n")
 
+
+def run_single_seed(simulation_settings):
+    local_settings = simulation_settings.copy()
+    local_settings["params_astar"] = simulation_settings["params_astar"].copy()
+    local_settings["params_cbs"] = simulation_settings["params_cbs"].copy()
+    local_settings["params_karma"] = simulation_settings["params_karma"].copy()
+
+    n_astar_calls = 0
+    if local_settings["debug_statements"]:
+        print("Starting Experiment", local_settings["random_seed"])
+
+    AStarPathPlanner.reset_counter()
+    environment = Environment(settings=local_settings)
+
+    for _ in range(local_settings["n_agents"]):
+        environment.spawn_agent()
+
+    for _ in range(local_settings["n_agents"]):
+        environment.spawn_task()
+
+    while environment.time < environment.settings["time_simulation_duration"]:
+        if local_settings["debug_statements"]:
+            print(
+                "\ttime:",
+                environment.time,
+                "\t| agents:",
+                len(environment.agents),
+                "\t| tasks:",
+                len(environment.tasks),
+            )
+
+        environment.time += 1
+        environment.handle_agents()
+
+        while len(environment.tasks) < len(environment.agents):
+            old_len = len(environment.tasks)
+            environment.spawn_task()
+            if old_len == len(environment.tasks):
+                break
+
+        environment.assign_open_tasks()
+        environment.close_finished_tasks()
+
+        n_astar_calls += AStarPathPlanner.get_counter()
+        AStarPathPlanner.reset_counter()
+
+    return compute_run_metrics(environment.completed_tasks, n_astar_calls)
+
 for grid_size in grid_sizes:
     results_summary[grid_size] = {}
     controllers_run = []
@@ -286,59 +335,24 @@ for grid_size in grid_sizes:
             )
 
             metrics_lists = {name: [] for name in METRIC_NAMES}
-
+            seed_jobs = []
             for random_seed in random_seeds:
-                simulation_settings["random_seed"] = random_seed
-                n_astar_calls = 0
-                if simulation_settings["debug_statements"]:
-                    print("Starting Experiment", random_seed)
-                environment = Environment(settings=simulation_settings)
-                # spawn initial agents
-                for n in range(0, simulation_settings["n_agents"]):  # int(N_AGENTS/2)):
-                    environment.spawn_agent()
-                # spawn initial tasks
-                for n in range(0, simulation_settings["n_agents"]):  # int(N_AGENTS/2)):
-                    environment.spawn_task()
-                # simulation loop
-                while (
-                    environment.time < environment.settings["time_simulation_duration"]
-                ):
-                    if simulation_settings["debug_statements"]:
-                        print(
-                            "\ttime:",
-                            environment.time,
-                            "\t| agents:",
-                            len(environment.agents),
-                            "\t| tasks:",
-                            len(environment.tasks),
-                        )
+                seed_settings = simulation_settings.copy()
+                seed_settings["random_seed"] = random_seed
+                seed_settings["params_astar"] = simulation_settings[
+                    "params_astar"
+                ].copy()
+                seed_settings["params_cbs"] = simulation_settings["params_cbs"].copy()
+                seed_settings["params_karma"] = simulation_settings[
+                    "params_karma"
+                ].copy()
+                seed_jobs.append(seed_settings)
 
-                    # general update
-                    environment.time += 1
+            max_workers = min(len(seed_jobs), os.cpu_count() or 1)
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                run_metrics_per_seed = list(executor.map(run_single_seed, seed_jobs))
 
-                    # handle agents
-                    environment.handle_agents()
-
-                    # # spawn tasks randomly
-                    while len(environment.tasks) < len(environment.agents):
-                        old_len = len(environment.tasks)
-                        environment.spawn_task()
-                        if old_len == len(
-                            environment.tasks
-                        ):  # currently too crowded to spawn
-                            break
-
-                    # handle tasks
-                    environment.assign_open_tasks()
-                    closed = environment.close_finished_tasks()
-
-                    # report A-STAR Calls
-                    n_astar_calls += AStarPathPlanner.COUNTER
-                    AStarPathPlanner.COUNTER = 0
-
-                run_metrics = compute_run_metrics(
-                    environment.completed_tasks, n_astar_calls
-                )
+            for run_metrics in run_metrics_per_seed:
                 for metric_name, metric_value in run_metrics.items():
                     metrics_lists[metric_name].append(metric_value)
 

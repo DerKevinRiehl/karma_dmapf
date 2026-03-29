@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from agent import Agent
 
 import heapq
+import threading
 from constants import DIRS, DIR_NAMES
 
 
@@ -49,12 +50,26 @@ This is important to make sure that after reaching goal, no conflicts happen dur
 
 class AStarPathPlanner:
     COUNTER: int = 0
+    _thread_local = threading.local()
 
     def __init__(
         self, static_occupancy_grid: NDArray[np.int_], astar_params: Dict[str, Any]
     ):
         self.static_occupancy_grid: NDArray[np.int_] = static_occupancy_grid
         self.astar_params: Dict[str, Any] = astar_params
+
+    @classmethod
+    def increment_counter(cls) -> None:
+        current_count = getattr(cls._thread_local, "counter", 0)
+        cls._thread_local.counter = current_count + 1
+
+    @classmethod
+    def get_counter(cls) -> int:
+        return getattr(cls._thread_local, "counter", 0)
+
+    @classmethod
+    def reset_counter(cls) -> None:
+        cls._thread_local.counter = 0
 
     def manhattan(self, a: Tuple[int, int], b: Tuple[int, int]) -> int:
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
@@ -118,7 +133,7 @@ class AStarPathPlanner:
         heapq.heappush(open_list, (0, start_state, []))
         while open_list:
             if not ignore_counter:
-                AStarPathPlanner.COUNTER += 1
+                AStarPathPlanner.increment_counter()
 
             steps += 1
             # ABORT CONDITION: TIMEOUT

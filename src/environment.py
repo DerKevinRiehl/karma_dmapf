@@ -26,15 +26,13 @@ class Environment:
         self.settings: Dict[str, Any] = settings
         self.grid: Grid = Grid(grid_size=self.settings["grid_size"])
         self.static_grid: Grid = Grid(grid_size=self.settings["grid_size"])
+        self.rng = np.random.default_rng(self.settings["random_seed"])
         self.time: int = 0
         self.agents: List[Agent] = []
         self.tasks: List[Task] = []
         self.completed_tasks: dict[int, List[Task]] = (
             {}
         )  # mapping: agent_id -> list of completed tasks
-
-        # set random seed
-        np.random.seed(self.settings["random_seed"])
 
     def determine_new_id(self, lst: Union[List[Agent], List[Task]]) -> int:
         last_id = 0
@@ -123,7 +121,9 @@ class Environment:
             == MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC
         ):
             self.handle_agents_route_planning_decentralized_negotiate(
-                NegotiationStrategy.negotiate_altruistic
+                lambda cost_other, cost_mine: NegotiationStrategy.negotiate_altruistic(
+                    cost_other, cost_mine, rng=self.rng
+                )
             )
         elif (
             self.settings["mapf_control"]

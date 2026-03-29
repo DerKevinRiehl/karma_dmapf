@@ -170,11 +170,13 @@ class Grid:
             (grid_size, grid_size), dtype=int
         )
 
-    def get_random_empty_square(self) -> Optional[List[int]]:
+    def get_random_empty_square(self, rng: Optional[Any] = None) -> Optional[List[int]]:
         empty_indices = np.argwhere(self.occupancy_grid == SQUARE_SYMBOL_EMPTY)
         if empty_indices.size == 0:
             return None
-        idx: int = np.random.choice(len(empty_indices))
+        if rng is None:
+            rng = np.random
+        idx: int = int(rng.choice(len(empty_indices)))
         x, y = empty_indices[idx]
         return [int(x), int(y)]
 
@@ -192,7 +194,10 @@ class Grid:
                     grid[nx][ny] = occupied_symbol
 
     def get_random_empty_square_no_tasks(
-        self, environment: Environment, pos: Optional[List[int]] = None
+        self,
+        environment: Environment,
+        pos: Optional[List[int]] = None,
+        rng: Optional[Any] = None,
     ) -> Optional[List[int]]:
         temp_occupancy_grid: NDArray[np.int_] = self.occupancy_grid.copy()
 
@@ -245,7 +250,10 @@ class Grid:
         if empty_indices.size == 0:
             return None
 
-        idx = np.random.choice(len(empty_indices))
+        if rng is None:
+            rng = environment.rng
+
+        idx = int(rng.choice(len(empty_indices)))
         x, y = empty_indices[idx]
         return [int(x), int(y)]
 
