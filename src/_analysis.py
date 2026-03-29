@@ -208,11 +208,20 @@ def _plot_box(
 random_seeds = range(41, 51)
 grid_sizes = [5]  # , 10, 15, 20]
 
+controllers = [
+    # MAPF_CONTROLLER_CENTRALIZED,
+    # MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+    # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
+    # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
+]
+
 n_agents_map = {
-    5: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-    10: [1, 5, 10, 15, 20, 25, 30],
-    15: [1, 10, 20, 30, 40, 50, 60, 70, 80],
-    20: [1, 10, 20, 40, 60, 80, 100, 120, 140],
+    5: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], # max 10
+    10: [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30], # max 30
+    15: [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80], # max 80
+    20: [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180], # max 180
 }
 results_summary = {}
 
@@ -260,14 +269,7 @@ with open("results/summary.txt", "w") as f:
 for grid_size in grid_sizes:
     results_summary[grid_size] = {}
     controllers_run = []
-    for controller in [
-        # MAPF_CONTROLLER_CENTRALIZED,
-        MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
-        MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
-        MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
-        MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
-        MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
-    ]:
+    for controller in controllers:
         if controller not in controllers_run:
             controllers_run.append(controller)
             results_summary[grid_size][controller] = {}
@@ -397,43 +399,43 @@ for grid_size in grid_sizes:
     # Print tables for this grid_size
     agents = n_agents_map[grid_size]
 
-    with open("results/summary.txt", "a") as f_summary:
-        f_summary.write(f"\n\n### GRID SIZE {grid_size} SUMMARY ###\n")
+    # with open("results/summary.txt", "a") as f_summary:
+    #     f_summary.write(f"\n\n### GRID SIZE {grid_size} SUMMARY ###\n")
 
-        # Write simulation settings
-        f_summary.write("Simulation Settings:\n")
-        for key, value in base_simulation_settings.items():
-            f_summary.write(f"  {key}: {value}\n")
-        f_summary.write(f"  random_seeds_range: {random_seeds}\n")
-        f_summary.write("\n")
+    #     # Write simulation settings
+    #     f_summary.write("Simulation Settings:\n")
+    #     for key, value in base_simulation_settings.items():
+    #         f_summary.write(f"  {key}: {value}\n")
+    #     f_summary.write(f"  random_seeds_range: {random_seeds}\n")
+    #     f_summary.write("\n")
 
-        for metric_name in [
-            "A* Calls",
-            "Completed Tasks",
-            "Total Task Time (incl. Reallocation) (all agents)",
-            "Avg Task Time (incl. Reallocation) (all agents)",
-            "Std Task Time (incl. Reallocation) (all agents)",
-            "Total Service Time (all agents)",
-            "Avg Service Time (all agents)",
-            "Std Service Time (all agents)",
-            "Avg Service Time Increase (%) (all agents)",
-            "Avg Service Time (per agent mean)",
-            "Avg Service Increase (%) (per agent mean)",
-        ]:
-            metric_data = {}
-            for algo in controllers_run:
-                metric_data[algo] = {}
-                for agent in agents:
-                    if agent in results_summary.get(grid_size, {}).get(algo, {}):
-                        metric_data[algo][agent] = results_summary[grid_size][algo][
-                            agent
-                        ][metric_name]
+    #     for metric_name in [
+    #         "A* Calls",
+    #         "Completed Tasks",
+    #         "Total Task Time (incl. Reallocation) (all agents)",
+    #         "Avg Task Time (incl. Reallocation) (all agents)",
+    #         "Std Task Time (incl. Reallocation) (all agents)",
+    #         "Total Service Time (all agents)",
+    #         "Avg Service Time (all agents)",
+    #         "Std Service Time (all agents)",
+    #         "Avg Service Time Increase (%) (all agents)",
+    #         "Avg Service Time (per agent mean)",
+    #         "Avg Service Increase (%) (per agent mean)",
+    #     ]:
+    #         metric_data = {}
+    #         for algo in controllers_run:
+    #             metric_data[algo] = {}
+    #             for agent in agents:
+    #                 if agent in results_summary.get(grid_size, {}).get(algo, {}):
+    #                     metric_data[algo][agent] = results_summary[grid_size][algo][
+    #                         agent
+    #                     ][metric_name]
 
-            table_str = get_markdown_table_str(
-                metric_name, metric_data, controllers_run, agents
-            )
-            print(table_str)
-            f_summary.write(table_str + "\n")
+    #         table_str = get_markdown_table_str(
+    #             metric_name, metric_data, controllers_run, agents
+    #         )
+    #         print(table_str)
+    #         f_summary.write(table_str + "\n")
 
     # Save the results_summary to a JSON file for plotting
     # Convert keys to strings for JSON compatibility
@@ -450,7 +452,7 @@ for grid_size in grid_sizes:
                     agent_key
                 ] = agent_data
 
-    with open("results/summary.json", "w") as f_json:
+    with open(f"results/summary_{controller}_{grid_size}.json", "w") as f_json:
         # Custom encoder to handle numpy arrays
         class NumpyEncoder(json.JSONEncoder):
             def default(self, o):
@@ -464,40 +466,40 @@ for grid_size in grid_sizes:
 
         json.dump(results_summary_str_keys, f_json, indent=4, cls=NumpyEncoder)
 
-    # Plotting results
-    for grid_size_str, grid_data in results_summary_str_keys.items():
-        grid_size = int(grid_size_str)
-        controllers = [c for c in grid_data.keys() if c != "raw_data"]
+    # # Plotting results
+    # for grid_size_str, grid_data in results_summary_str_keys.items():
+    #     grid_size = int(grid_size_str)
+    #     controllers = [c for c in grid_data.keys() if c != "raw_data"]
 
-        # Determine the union of agents for this grid size
-        all_agents = set()
-        for controller in controllers:
-            all_agents.update(grid_data[controller].keys())
+    #     # Determine the union of agents for this grid size
+    #     all_agents = set()
+    #     for controller in controllers:
+    #         all_agents.update(grid_data[controller].keys())
 
-        # Convert agent keys from string to int and sort
-        agents = sorted([int(a) for a in all_agents if a.isdigit()])
+    #     # Convert agent keys from string to int and sort
+    #     agents = sorted([int(a) for a in all_agents if a.isdigit()])
 
-        # Get all metric names from the first available data point
-        metric_names = []
-        if controllers and agents:
-            first_controller = controllers[0]
-            first_agent_str = str(agents[0])
-            if first_agent_str in grid_data[first_controller]:
-                metric_names = [
-                    k
-                    for k in grid_data[first_controller][first_agent_str].keys()
-                    if k != "raw_data"
-                ]
+    #     # Get all metric names from the first available data point
+    #     metric_names = []
+    #     if controllers and agents:
+    #         first_controller = controllers[0]
+    #         first_agent_str = str(agents[0])
+    #         if first_agent_str in grid_data[first_controller]:
+    #             metric_names = [
+    #                 k
+    #                 for k in grid_data[first_controller][first_agent_str].keys()
+    #                 if k != "raw_data"
+    #             ]
 
-        if not metric_names:
-            print(f"No metrics found for grid size {grid_size}. Skipping.")
-            continue
+    #     if not metric_names:
+    #         print(f"No metrics found for grid size {grid_size}. Skipping.")
+    #         continue
 
-        for metric_name in metric_names:
-            plot_metric(
-                metric_name,
-                results_summary,
-                grid_size,
-                agents,
-                controllers,
-            )
+    #     for metric_name in metric_names:
+    #         plot_metric(
+    #             metric_name,
+    #             results_summary,
+    #             grid_size,
+    #             agents,
+    #             controllers,
+    #         )
