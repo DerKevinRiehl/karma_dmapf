@@ -14,6 +14,7 @@ import json
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from analysis_helpers import gini, summarize, compute_run_metrics
 from environment import Environment
 from planner_path_astar import AStarPathPlanner
 
@@ -28,27 +29,6 @@ from constants import (
 
 # ensure results directory exists
 os.makedirs("results", exist_ok=True)
-
-
-def gini(x):
-    # Mean absolute difference
-    mad = np.abs(np.subtract.outer(x, x)).mean()
-    # Relative mean absolute difference
-    rmad = mad / np.mean(x)
-    # Gini coefficient
-    g = 0.5 * rmad
-    return g
-
-
-def summarize(x):
-    x = np.array(x, dtype=float)
-    return (
-        x.mean(),
-        x.std(ddof=0),
-        np.median(x),
-        gini(x),
-        np.percentile(x, 75) - np.percentile(x, 25),
-    )  # population std; use ddof=1 for sample std
 
 
 def get_markdown_table_str(title, data, algorithms, agents):
@@ -259,6 +239,20 @@ base_simulation_settings = {
     "debug_statements": False,
 }
 
+METRIC_NAMES = [
+    "A* Calls",
+    "Completed Tasks",
+    "Total Task Time (incl. Reallocation) (all agents)",
+    "Avg Task Time (incl. Reallocation) (all agents)",
+    "Std Task Time (incl. Reallocation) (all agents)",
+    "Total Service Time (all agents)",
+    "Avg Service Time (all agents)",
+    "Std Service Time (all agents)",
+    "Avg Service Time Increase (%) (all agents)",
+    "Avg Service Time (per agent mean)",
+    "Avg Service Increase (%) (per agent mean)",
+]
+
 # clear summary file
 with open("results/summary.txt", "w") as f:
     f.write("Summary of Results\n")
@@ -289,29 +283,7 @@ for grid_size in grid_sizes:
                 }
             )
 
-            astar_calls_list = []
-            n_completed_tasks_list = []
-
-            # Task Time (incl. Reallocation) metrics (spawn -> complete, including reallocation time)
-            n_total_task_time_list = []
-            n_average_task_time_list = []
-            n_std_task_time_list = []
-
-            # Service Time metrics (pickup -> complete)
-            n_total_service_time_list = []
-            n_average_service_time_list = []
-            n_std_service_time_list = []
-
-            # Service Time Increase Percentage metrics ((service - min) / min)
-            n_average_service_increase_list = []
-            n_std_service_increase_list = []
-
-            # PER AGENT METRICS
-            # Service Time (per agent)
-            n_avg_service_time_per_agent_list = []
-
-            # Service Time Increase (per agent)
-            n_avg_service_increase_per_agent_list = []
+            metrics_lists = {name: [] for name in METRIC_NAMES}
 
             for random_seed in random_seeds:
                 simulation_settings["random_seed"] = random_seed
@@ -362,215 +334,16 @@ for grid_size in grid_sizes:
                     n_astar_calls += AStarPathPlanner.COUNTER
                     AStarPathPlanner.COUNTER = 0
 
-                ############################################################
-                # COMPUTE METRICS
-                # 0. Flatten tasks from all agents
-                all_completed_tasks = [
-                    task
-                    for task_list in environment.completed_tasks.values()
-                    for task in task_list
-                ]
-
-                # 1. Task Time (incl. Reallocation) (spawn -> complete)
-                task_total_times = [
-                    task.completed_time - task.spawned_time
-                    for task in all_completed_tasks
-                    if task.completed_time is not None
-                ]
-
-                # 2. Service Time (pickup -> complete)
-                task_service_times = [
-                    task.completed_time - task.pickup_time
-                    for task in all_completed_tasks
-                    if task.completed_time is not None and task.pickup_time is not None
-                ]
-
-                # 3. Minimum Task Time
-                task_min_times = [
-                    task.minimum_task_time
-                    for task in all_completed_tasks
-                    if task.minimum_task_time != 0
-                ]
-
-                # 4. Service Time Increase Percentage
-                # (service_time - min_time) / min_time
-                task_service_increase_percentages = []
-                for s_time, m_time in zip(task_service_times, task_min_times):
-                    task_service_increase_percentages.append(
-                        (s_time - m_time) / m_time * 100
-                    )
-
-                # if the number of tracked tasks is different, raise an error
-                if len(task_total_times) != len(task_service_times) or len(
-                    task_total_times
-                ) != len(task_service_increase_percentages):
-                    raise ValueError(
-                        "Number of completed tasks with total time does not match number of completed tasks with service time or service time increase percentages."
-                    )
-
-                # Task Time (incl. Reallocation) stats
-                n_total_task_time = np.sum(task_total_times)
-                n_average_task_time = np.mean(task_total_times)
-                n_std_task_time = np.std(task_total_times)
-
-                # Service Time stats
-                n_total_service_time = np.sum(task_service_times)
-                n_average_service_time = np.mean(task_service_times)
-                n_std_service_time = np.std(task_service_times)
-
-                # Service Time Increase stats
-                n_average_service_increase = np.mean(task_service_increase_percentages)
-                n_std_service_increase = np.std(task_service_increase_percentages)
-
-                # 5. Per Agent Metrics
-                # For each agent, compute their average service time and average increase
-                list_agent_avg_service_times = []
-                list_agent_avg_service_increases = []
-
-                for agent_id, agent_tasks in environment.completed_tasks.items():
-                    if len(agent_tasks) == 0:
-                        continue
-
-                    # Service Times for this agent
-                    a_service_times = [
-                        task.completed_time - task.pickup_time
-                        for task in agent_tasks
-                        if task.completed_time is not None
-                        and task.pickup_time is not None
-                    ]
-
-                    # Service Time Increases for this agent
-                    a_min_times = [
-                        task.minimum_task_time
-                        for task in agent_tasks
-                        if task.minimum_task_time != 0
-                    ]
-                    a_increases = []
-                    for s, m in zip(a_service_times, a_min_times):
-                        a_increases.append((s - m) / m * 100)
-
-                    if len(a_service_times) > 0:
-                        list_agent_avg_service_times.append(np.mean(a_service_times))
-
-                    if len(a_increases) > 0:
-                        list_agent_avg_service_increases.append(np.mean(a_increases))
-
-                # Compute stats across agents for this run
-                # Mean of agent averages -> "How does the average agent perform?"
-                n_avg_service_time_per_agent = (
-                    np.mean(list_agent_avg_service_times)
-                    if list_agent_avg_service_times
-                    else 0
+                run_metrics = compute_run_metrics(
+                    environment.completed_tasks, n_astar_calls
                 )
+                for metric_name, metric_value in run_metrics.items():
+                    metrics_lists[metric_name].append(metric_value)
 
-                n_avg_service_increase_per_agent = (
-                    np.mean(list_agent_avg_service_increases)
-                    if list_agent_avg_service_increases
-                    else 0
-                )
-
-                # store metrics
-                n_completed_tasks = len(task_total_times)
-                astar_calls_list.append(n_astar_calls)
-                n_completed_tasks_list.append(n_completed_tasks)
-
-                n_total_task_time_list.append(n_total_task_time)
-                n_average_task_time_list.append(n_average_task_time)
-                n_std_task_time_list.append(n_std_task_time)
-
-                n_total_service_time_list.append(n_total_service_time)
-                n_average_service_time_list.append(n_average_service_time)
-                n_std_service_time_list.append(n_std_service_time)
-
-                n_average_service_increase_list.append(n_average_service_increase)
-                n_std_service_increase_list.append(n_std_service_increase)
-
-                n_avg_service_time_per_agent_list.append(n_avg_service_time_per_agent)
-
-                n_avg_service_increase_per_agent_list.append(
-                    n_avg_service_increase_per_agent
-                )
-
-            avg_astar, std_astar, median_astar, gini_astar, iqr_astar = summarize(
-                astar_calls_list
-            )
-            (
-                avg_completed,
-                std_completed,
-                median_completed,
-                gini_completed,
-                iqr_completed,
-            ) = summarize(n_completed_tasks_list)
-
-            (
-                avg_total_task,
-                std_total_task,
-                median_total_task,
-                gini_total_task,
-                iqr_total_task,
-            ) = summarize(n_total_task_time_list)
-            (
-                avg_avg_task,
-                std_avg_task,
-                median_avg_task,
-                gini_avg_task,
-                iqr_avg_task,
-            ) = summarize(n_average_task_time_list)
-            (
-                avg_std_task,
-                std_std_task,
-                median_std_task,
-                gini_std_task,
-                iqr_std_task,
-            ) = summarize(n_std_task_time_list)
-
-            (
-                avg_total_srv,
-                std_total_srv,
-                median_total_srv,
-                gini_total_srv,
-                iqr_total_srv,
-            ) = summarize(n_total_service_time_list)
-            (
-                avg_avg_srv,
-                std_avg_srv,
-                median_avg_srv,
-                gini_avg_srv,
-                iqr_avg_srv,
-            ) = summarize(n_average_service_time_list)
-            (
-                avg_std_srv,
-                std_std_srv,
-                median_std_srv,
-                gini_std_srv,
-                iqr_std_srv,
-            ) = summarize(n_std_service_time_list)
-
-            (
-                avg_avg_increase,
-                std_avg_increase,
-                median_avg_increase,
-                gini_avg_increase,
-                iqr_avg_increase,
-            ) = summarize(n_average_service_increase_list)
-
-            # Per Agent Metrics
-            # Service Time
-            (
-                avg_avg_srv_per_agent,
-                std_avg_srv_per_agent,
-                median_avg_srv_per_agent,
-                gini_avg_srv_per_agent,
-                iqr_avg_srv_per_agent,
-            ) = summarize(n_avg_service_time_per_agent_list)
-            # Service Increase
-            (
-                avg_avg_inc_per_agent,
-                std_avg_inc_per_agent,
-                median_avg_inc_per_agent,
-                gini_avg_inc_per_agent,
-                iqr_avg_inc_per_agent,
-            ) = summarize(n_avg_service_increase_per_agent_list)
+            metrics_summary = {
+                metric_name: summarize(values)
+                for metric_name, values in metrics_lists.items()
+            }
 
             # Store raw data for box plots
             if "raw_data" not in results_summary[grid_size][controller]:
@@ -581,115 +354,10 @@ for grid_size in grid_sizes:
             raw_data_storage = results_summary[grid_size][controller]["raw_data"][
                 n_agent
             ]
-            raw_data_storage["A* Calls"] = astar_calls_list
-            raw_data_storage["Completed Tasks"] = n_completed_tasks_list
-            raw_data_storage["Total Task Time (incl. Reallocation) (all agents)"] = (
-                n_total_task_time_list
-            )
-            raw_data_storage["Avg Task Time (incl. Reallocation) (all agents)"] = (
-                n_average_task_time_list
-            )
-            raw_data_storage["Std Task Time (incl. Reallocation) (all agents)"] = (
-                n_std_task_time_list
-            )
-            raw_data_storage["Total Service Time (all agents)"] = (
-                n_total_service_time_list
-            )
-            raw_data_storage["Avg Service Time (all agents)"] = (
-                n_average_service_time_list
-            )
-            raw_data_storage["Std Service Time (all agents)"] = n_std_service_time_list
-            raw_data_storage["Avg Service Time Increase (%) (all agents)"] = (
-                n_average_service_increase_list
-            )
-            raw_data_storage["Avg Service Time (per agent mean)"] = (
-                n_avg_service_time_per_agent_list
-            )
-            raw_data_storage["Avg Service Increase (%) (per agent mean)"] = (
-                n_avg_service_increase_per_agent_list
-            )
+            for metric_name, values in metrics_lists.items():
+                raw_data_storage[metric_name] = values
 
-            metrics = {
-                "A* Calls": (
-                    avg_astar,
-                    std_astar,
-                    median_astar,
-                    gini_astar,
-                    iqr_astar,
-                ),
-                "Completed Tasks": (
-                    avg_completed,
-                    std_completed,
-                    median_completed,
-                    gini_completed,
-                    iqr_completed,
-                ),
-                "Total Task Time (incl. Reallocation) (all agents)": (
-                    avg_total_task,
-                    std_total_task,
-                    median_total_task,
-                    gini_total_task,
-                    iqr_total_task,
-                ),
-                "Avg Task Time (incl. Reallocation) (all agents)": (
-                    avg_avg_task,
-                    std_avg_task,
-                    median_avg_task,
-                    gini_avg_task,
-                    iqr_avg_task,
-                ),
-                "Std Task Time (incl. Reallocation) (all agents)": (
-                    avg_std_task,
-                    std_std_task,
-                    median_std_task,
-                    gini_std_task,
-                    iqr_std_task,
-                ),
-                "Total Service Time (all agents)": (
-                    avg_total_srv,
-                    std_total_srv,
-                    median_total_srv,
-                    gini_total_srv,
-                    iqr_total_srv,
-                ),
-                "Avg Service Time (all agents)": (
-                    avg_avg_srv,
-                    std_avg_srv,
-                    median_avg_srv,
-                    gini_avg_srv,
-                    iqr_avg_srv,
-                ),
-                "Std Service Time (all agents)": (
-                    avg_std_srv,
-                    std_std_srv,
-                    median_std_srv,
-                    gini_std_srv,
-                    iqr_std_srv,
-                ),
-                "Avg Service Time Increase (%) (all agents)": (
-                    avg_avg_increase,
-                    std_avg_increase,
-                    median_avg_increase,
-                    gini_avg_increase,
-                    iqr_avg_increase,
-                ),
-                # New Metrics
-                "Avg Service Time (per agent mean)": (
-                    avg_avg_srv_per_agent,
-                    std_avg_srv_per_agent,
-                    median_avg_srv_per_agent,
-                    gini_avg_srv_per_agent,
-                    iqr_avg_srv_per_agent,
-                ),
-                "Avg Service Increase (%) (per agent mean)": (
-                    avg_avg_inc_per_agent,
-                    std_avg_inc_per_agent,
-                    median_avg_inc_per_agent,
-                    gini_avg_inc_per_agent,
-                    iqr_avg_inc_per_agent,
-                ),
-            }
-            results_summary[grid_size][controller][n_agent] = metrics
+            results_summary[grid_size][controller][n_agent] = metrics_summary
 
             report_lines = []
             report_lines.append("=====================================================")
@@ -701,99 +369,17 @@ for grid_size in grid_sizes:
                 + " grid-size] for algorithm "
                 + str(simulation_settings["mapf_control"])
                 + " over "
-                + str(len(astar_calls_list))
+                + str(len(next(iter(metrics_lists.values()), [])))
                 + " experiments"
             )
             report_lines.append("=====================================================")
-            report_lines.append(
-                "A* calls:                                             mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
-                    avg_astar, std_astar, median_astar, gini_astar, iqr_astar
-                )
-            )
-            report_lines.append(
-                "Completed tasks:                                      mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
-                    avg_completed,
-                    std_completed,
-                    median_completed,
-                    gini_completed,
-                    iqr_completed,
-                )
-            )
-            report_lines.append(
-                "Total Task Time (incl. Reallocation) (all agents):    mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
-                    avg_total_task,
-                    std_total_task,
-                    median_total_task,
-                    gini_total_task,
-                    iqr_total_task,
-                )
-            )
-            report_lines.append(
-                "Avg Task Time (incl. Reallocation) (all agents):      mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
-                    avg_avg_task,
-                    std_avg_task,
-                    median_avg_task,
-                    gini_avg_task,
-                    iqr_avg_task,
-                )
-            )
-            report_lines.append(
-                "Std Task Time (incl. Reallocation) (all agents):      mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
-                    avg_std_task,
-                    std_std_task,
-                    median_std_task,
-                    gini_std_task,
-                    iqr_std_task,
-                )
-            )
-            report_lines.append(
-                "Total Service Time (all agents):                      mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
-                    avg_total_srv,
-                    std_total_srv,
-                    median_total_srv,
-                    gini_total_srv,
-                    iqr_total_srv,
-                )
-            )
-            report_lines.append(
-                "Avg Service Time (all agents):                        mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
-                    avg_avg_srv, std_avg_srv, median_avg_srv, gini_avg_srv, iqr_avg_srv
-                )
-            )
-            report_lines.append(
-                "Std Service Time (all agents):                        mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
-                    avg_std_srv, std_std_srv, median_std_srv, gini_std_srv, iqr_std_srv
-                )
-            )
-            report_lines.append(
-                "Avg Service Time Increase (%) (all agents):           mean = {:.3f}% \t std = {:.3f}% \t median = {:.3f}% \t gini = {:.3f} \t iqr = {:.3f}%".format(
-                    avg_avg_increase,
-                    std_avg_increase,
-                    median_avg_increase,
-                    gini_avg_increase,
-                    iqr_avg_increase,
-                )
-            )
 
-            report_lines.append(
-                "Avg Service Time (per agent mean):                    mean = {:.3f} \t std = {:.3f} \t median = {:.3f} \t gini = {:.3f} \t iqr = {:.3f}".format(
-                    avg_avg_srv_per_agent,
-                    std_avg_srv_per_agent,
-                    median_avg_srv_per_agent,
-                    gini_avg_srv_per_agent,
-                    iqr_avg_srv_per_agent,
+            for metric_name in METRIC_NAMES:
+                mean, std, median, gini_val, iqr = metrics_summary[metric_name]
+                percent_suffix = "%" if "(%)" in metric_name else ""
+                report_lines.append(
+                    f"{metric_name:60} mean = {mean:.3f}{percent_suffix} \t std = {std:.3f}{percent_suffix} \t median = {median:.3f}{percent_suffix} \t gini = {gini_val:.3f} \t iqr = {iqr:.3f}{percent_suffix}"
                 )
-            )
-
-            report_lines.append(
-                "Avg Service Increase (%) (per agent mean):            mean = {:.3f}% \t std = {:.3f}% \t median = {:.3f}% \t gini = {:.3f} \t iqr = {:.3f}%".format(
-                    avg_avg_inc_per_agent,
-                    std_avg_inc_per_agent,
-                    median_avg_inc_per_agent,
-                    gini_avg_inc_per_agent,
-                    iqr_avg_inc_per_agent,
-                )
-            )
 
             report_lines.append(
                 "=====================================================\n"
