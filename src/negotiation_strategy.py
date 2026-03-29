@@ -37,9 +37,23 @@ class NegotiationStrategy:
     def _karma_payment_rule(
         cost_mine: int, cost_other: int, other_resolves_conflict: bool, karma_params
     ) -> int:
+        # RULE 1: fixed payment
         # payment = karma_params["karma_payment"]
-        # payment = max(0, cost_mine - cost_other) if other_resolves_conflict else max(0, cost_other - cost_mine)
+
+        # RULE 2: loser has to avoid collision, winner pays the cost difference between the two agents
+        # (i.e. the overall collision avoidance effort that was saved through the negotiation agreement)
+        # payment = (
+        #     max(0, cost_mine - cost_other)
+        #     if other_resolves_conflict
+        #     else max(0, cost_other - cost_mine)
+        # )
+
+        # RULE 3: loser has to avoid collision, winner pays the collision avoidance effort of the loser
         payment = cost_other if other_resolves_conflict else cost_mine
+
+        # RULE 4: loser has to avoid collision, winner pays the collision avoidance effort they saved through this
+        # payment = cost_mine if other_resolves_conflict else cost_other
+
         return payment
 
     @staticmethod
