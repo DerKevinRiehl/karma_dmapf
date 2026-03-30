@@ -130,11 +130,14 @@ class AStarPathPlanner:
         start_state: PathPlannerState = PathPlannerState(
             start[0], start[1], start[2], 0, "start", (start[0], start[1]) == goal
         )
-        heapq.heappush(open_list, (0, start_state, []))
-        while open_list:
-            if not ignore_counter:
-                AStarPathPlanner.increment_counter()
+        heapq.heappush(
+            open_list,
+            (self.manhattan((start[0], start[1]), goal), start_state, []),
+        )
+        if not ignore_counter:
+            AStarPathPlanner.increment_counter()
 
+        while open_list:
             steps += 1
             # ABORT CONDITION: TIMEOUT
             if steps > self.astar_params["max_iterations"]:
