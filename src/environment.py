@@ -445,6 +445,10 @@ class Environment:
                         f"Conflict with agent id {top_priority_conflict['conflicting_agent']} but no such agent found."
                     )
 
+                if self.settings["debug_statements"]:
+                    print("\t>>Negotiation Started, from Side ", agent.id)
+                    print("\t\t Conflict with agent", conflicting_agent.id)
+                    
                 # solve conflict
                 # determine costs
                 change_cost_other, alternative_path_other = (
@@ -455,9 +459,14 @@ class Environment:
                 change_cost_mine, alternative_path_mine = self.determine_my_cost(
                     agent, conflicting_agent, current_path
                 )
+                if self.settings["debug_statements"]:
+                    print("\t\t Costs other", change_cost_other, "mine", change_cost_mine)
+
                 if alternative_path_other is None:
                     agreement_to_solve_conflict = False
-                else:
+                    if self.settings["debug_statements"]:
+                        print(f"Conflict with agent {conflicting_agent.id} but no alternative path found by conflicting agent for them to solve the conflict.")
+                else:   
                     if (
                         cost_transform
                         and conflicting_agent.minimal_path_cost is not None
@@ -516,12 +525,10 @@ class Environment:
                     )
                     # execute decision
 
-                if agreement_to_solve_conflict:
-                    if alternative_path_other is None:
-                        raise ValueError(
-                            f"Conflict with agent {conflicting_agent.id} but no alternative path found for them to solve the conflict."
-                        )
+                if self.settings["debug_statements"]:
+                    print("\t\t Outcome", agreement_to_solve_conflict)
 
+                if agreement_to_solve_conflict:
                     conflicting_agent.change_path_to_satisfy(
                         change_to_path=alternative_path_other
                     )

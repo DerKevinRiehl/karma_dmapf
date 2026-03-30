@@ -387,6 +387,10 @@ class Agent:
             if state.t < reservation_grid.shape[0]:
                 # mark with this agent's id to block reuse; id is int, -1 means free elsewhere
                 reservation_grid[state.t][state.x][state.y] = self.id
+        last_state = to_avoid_path[-1]
+        # inifinite remaining on that position after path execution
+        for t in range(last_state.t, reservation_grid.shape[0]):
+            reservation_grid[t][last_state.x][last_state.y] = self.id
 
         # if you have a target
         changed_path: Optional[List["PathPlannerState"]] = None
