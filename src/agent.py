@@ -82,7 +82,7 @@ class Agent:
                 ),
                 goal=self.assigned_task.to_position,
             )
-            carry_time = len(carry_path)        
+            carry_time = len(carry_path)
             return time_so_far + len(self.route) + carry_time
         else:
             return None
@@ -403,7 +403,7 @@ class Agent:
             # determine if there is any free position nearby to idle parking
             changed_path = self._determine_idle_parking_path(reservation_grid)
             return 1000, changed_path
-        
+
     def change_path_to_satisfy(self, change_to_path: List["PathPlannerState"]) -> None:
         alternative_route = self.path_planner.convert_path_to_route(change_to_path)
         self.route = alternative_route if alternative_route else []
