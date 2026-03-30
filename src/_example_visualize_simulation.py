@@ -53,8 +53,7 @@ simulation_settings = {
     "params_karma": {
         "initial_karma": 0,
         "delta_threshold": 0,
-        "karma_payment": 1,
-        "karma_influence": 0.6,
+        "karma_influence": 0.5,
     },
     "debug_statements": False,
 }
@@ -129,9 +128,9 @@ while environment.time < environment.settings["time_simulation_duration"]:
     closed = environment.close_finished_tasks()
 
     # visualize
-    os.makedirs("figs", exist_ok=True)
+    os.makedirs("figures_gifs", exist_ok=True)
     plot_environment_and_reservation(
-        environment, save_filename=f"figs/x_image_{environment.time:04d}.png"
+        environment, save_filename=f"figures_gifs/x_image_{environment.time:04d}.png"
     )
     check_violation(environment, previous_positions)
 
@@ -141,7 +140,7 @@ while environment.time < environment.settings["time_simulation_duration"]:
 
 os.makedirs("results", exist_ok=True)
 make_gif(
-    input_pattern="figs/x_image_*.png",
+    input_pattern="figures_gifs/x_image_*.png",
     output_gif=f"results/animation_{environment.settings['mapf_control']}.gif",
     duration=0.2,
 )

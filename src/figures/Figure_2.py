@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
-folder = "../logs_kevin/"
+folder = "../log_files/analysis_2/"
 
 controller_file_names = [
     "DECENTRALIZED_RESPECT",

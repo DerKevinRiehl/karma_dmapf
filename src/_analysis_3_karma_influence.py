@@ -81,8 +81,7 @@ BASE_SIMULATION_SETTINGS: Dict[str, Any] = {
     "params_karma": {
         "initial_karma": 0,
         "delta_threshold": DELTA_THRESHOLD,
-        "karma_payment": 1,
-        "karma_influence": 0.2,
+        "karma_influence": 0.5,
     },
     "debug_statements": False,
 }

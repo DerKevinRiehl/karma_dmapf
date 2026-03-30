@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import json
 
-folder = "../logs_kevin/"
+folder = "../log_files/analysis_1/"
 
 grid_sizes = ["5", "10", "15", "20"]
 
