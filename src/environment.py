@@ -468,9 +468,27 @@ class Environment:
                         cost_other_realized = (
                             conflicting_agent.get_forecasted_path_total_cost()
                         )
-                        cost_mine_realized = (
-                            agent.get_forecasted_path_total_cost() + len(current_path)
+
+                        cost_mine_total_forecasted = (
+                            agent.get_forecasted_path_total_cost()
+                        )
+                        if cost_mine_total_forecasted is None:
+                            raise ValueError(
+                                f"Cannot transform costs for negotiation because agent {agent.id} has no forecasted path total cost."
+                            )
+                        cost_mine_realized = cost_mine_total_forecasted + len(
+                            current_path
                         )  # because agent.route is not set yet
+
+                        if (
+                            cost_other_realized is None
+                            or cost_mine_realized is None
+                            or cost_mine_min is None
+                        ):
+                            raise ValueError(
+                                f"Cannot transform costs for negotiation because one of the agents has no forecasted path total cost."
+                            )
+
                         deviation_other_before = cost_other_realized / cost_other_min
                         deviation_other_after = (
                             cost_other_realized + change_cost_other
@@ -497,7 +515,13 @@ class Environment:
                         use_agent_params,
                     )
                     # execute decision
+
                 if agreement_to_solve_conflict:
+                    if alternative_path_other is None:
+                        raise ValueError(
+                            f"Conflict with agent {conflicting_agent.id} but no alternative path found for them to solve the conflict."
+                        )
+
                     conflicting_agent.change_path_to_satisfy(
                         change_to_path=alternative_path_other
                     )
