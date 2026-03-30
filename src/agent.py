@@ -148,7 +148,8 @@ class Agent:
             start=(pickup_state.x, pickup_state.y, pickup_state.theta),
             goal=self.assigned_task.to_position,
         )
-        return pickup_state.t + delivery_path[-1].t
+
+        return len(pickup_path) + len(delivery_path)
 
     def update_target_position(self, time: int) -> None:
         # determine target

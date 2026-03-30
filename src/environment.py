@@ -448,7 +448,7 @@ class Environment:
                 if self.settings["debug_statements"]:
                     print("\t>>Negotiation Started, from Side ", agent.id)
                     print("\t\t Conflict with agent", conflicting_agent.id)
-                    
+
                 # solve conflict
                 # determine costs
                 change_cost_other, alternative_path_other = (
@@ -460,13 +460,17 @@ class Environment:
                     agent, conflicting_agent, current_path
                 )
                 if self.settings["debug_statements"]:
-                    print("\t\t Costs other", change_cost_other, "mine", change_cost_mine)
+                    print(
+                        "\t\t Costs other", change_cost_other, "mine", change_cost_mine
+                    )
 
                 if alternative_path_other is None:
                     agreement_to_solve_conflict = False
                     if self.settings["debug_statements"]:
-                        print(f"Conflict with agent {conflicting_agent.id} but no alternative path found by conflicting agent for them to solve the conflict.")
-                else:   
+                        print(
+                            f"Conflict with agent {conflicting_agent.id} but no alternative path found by conflicting agent for them to solve the conflict."
+                        )
+                else:
                     if (
                         cost_transform
                         and conflicting_agent.minimal_path_cost is not None
@@ -515,6 +519,7 @@ class Environment:
                         )
                         change_cost_mine = deviation_mine_after - deviation_mine_before
                         # make decision
+
                     agreement_to_solve_conflict = self.make_decision(
                         agent,
                         conflicting_agent,
