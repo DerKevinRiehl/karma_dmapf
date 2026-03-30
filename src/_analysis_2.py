@@ -8,8 +8,8 @@ interesting repo: https://github.com/GavinPHR/Multi-Agent-Path-Finding?tab=readm
 ###############################################################################
 ###### IMPORTS ################################################################
 ###############################################################################
-import os
 import numpy as np
+import os
 from environment import Environment
 from planner_path_astar import AStarPathPlanner
 from visualization import plot_environment_and_reservation, make_gif
@@ -28,16 +28,21 @@ from constants import (
 ###############################################################################
 ###### PARAMETERS #############################################################
 ###############################################################################
+
+random_seeds = [n for n in range(41,51)]
+
+os.makedirs("results", exist_ok=True)
+
 simulation_settings = {
     "random_seed": 42,
-    "grid_size": 20 + 2,  # 15,
-    "n_agents": 180,
+    "grid_size": 10 + 2,  # 15,
+    "n_agents": 30,
     # "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
-    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
-    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
+    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
     "time_horizon_visualization": 10,
     "time_simulation_duration": 100,
     "params_astar": {
@@ -52,9 +57,9 @@ simulation_settings = {
     },
     "params_karma": {
         "initial_karma": 0,
-        "delta_threshold": 1,
+        "delta_threshold": 0,
         "karma_payment": 1,
-        "karma_influence": 0.6,
+        "karma_influence": 0.5,
     },
     "debug_statements": False,
 }
@@ -89,59 +94,93 @@ def check_violation(environment, previous_positions=None):
 ###############################################################################
 ###### MAIN ###################################################################
 ###############################################################################
-environment = Environment(settings=simulation_settings)
+def run_single_seed(seed):
+    seed_settings = simulation_settings.copy()
+    seed_settings["random_seed"] = seed
+    seed_settings["params_astar"] = simulation_settings["params_astar"].copy()
+    seed_settings["params_cbs"] = simulation_settings["params_cbs"].copy()
+    seed_settings["params_karma"] = simulation_settings["params_karma"].copy()
 
-# spawn initial agents
-for n in range(0, simulation_settings["n_agents"]):
-    environment.spawn_agent()
+    environment = Environment(settings=seed_settings)
 
-# spawn initial agents
-for n in range(0, simulation_settings["n_agents"]):
-    environment.spawn_task()
+    for _ in range(seed_settings["n_agents"]):
+        environment.spawn_agent()
 
-# simulation loop
-while environment.time < environment.settings["time_simulation_duration"]:
-    print(
-        "\n\ntime:",
-        environment.time,
-        "\t| agents:",
-        len(environment.agents),
-        "\t| tasks:",
-        len(environment.tasks),
-    )
-
-    # general update
-    environment.time += 1
-
-    # handle agents
-    previous_positions = {a.id: list(a.current_position) for a in environment.agents}
-    environment.handle_agents()
-
-    # # spawn tasks randomly
-    while len(environment.tasks) < len(environment.agents):
-        n = len(environment.tasks)
+    for _ in range(seed_settings["n_agents"]):
         environment.spawn_task()
-        if n == len(environment.tasks):
-            break
 
-    # handle tasks
-    environment.assign_open_tasks()
-    closed = environment.close_finished_tasks()
+    while environment.time < environment.settings["time_simulation_duration"]:
+        print(
+            "\nseed:",
+            seed,
+            "\ttime:",
+            environment.time,
+            "\t| agents:",
+            len(environment.agents),
+            "\t| tasks:",
+            len(environment.tasks),
+        )
 
-    # visualize
-    os.makedirs("figs", exist_ok=True)
-    plot_environment_and_reservation(
-        environment, save_filename=f"figs/x_image_{environment.time:04d}.png"
-    )
-    check_violation(environment, previous_positions)
+        environment.time += 1
 
-    # report A-STAR Calls
-    print("\tA-Star Calls:", AStarPathPlanner.get_counter())
-    AStarPathPlanner.reset_counter()
+        previous_positions = {a.id: list(a.current_position) for a in environment.agents}
+        environment.handle_agents()
 
-os.makedirs("results", exist_ok=True)
-make_gif(
-    input_pattern="figs/x_image_*.png",
-    output_gif=f"results/animation_{environment.settings['mapf_control']}.gif",
-    duration=0.2,
+        # Uncomment for conflict debugging if needed.
+        # check_violation(environment, previous_positions)
+
+        while len(environment.tasks) < len(environment.agents):
+            n = len(environment.tasks)
+            environment.spawn_task()
+            if n == len(environment.tasks):
+                break
+
+        environment.assign_open_tasks()
+        environment.close_finished_tasks()
+
+        print("\tA-Star Calls:", AStarPathPlanner.get_counter())
+        AStarPathPlanner.reset_counter()
+
+    seed_task_times = []
+    seed_service_times = []
+    for agent in environment.completed_tasks:
+        for task in environment.completed_tasks[agent]:
+            if task.completed_time is not None:
+                task_time = task.completed_time - task.spawned_time + 1
+                seed_task_times.append(task_time)
+                if task.pickup_time is not None:
+                    service_time = task.completed_time - task.pickup_time + 1
+                    seed_service_times.append(service_time)
+
+    return seed_task_times, seed_service_times
+
+
+all_task_times = []
+all_service_times = []
+
+for seed in random_seeds:
+    seed_task_times, seed_service_times = run_single_seed(seed)
+    all_task_times.extend(seed_task_times)
+    all_service_times.extend(seed_service_times)
+
+task_times_path = (
+    f"results/all_task_times_{simulation_settings['mapf_control']}_"
+    f"{simulation_settings['grid_size']-2}_{simulation_settings['n_agents']}.txt"
 )
+with open(task_times_path, "w+") as f:
+    for time in all_task_times:
+        f.write(str(time))
+        f.write("\n")
+
+service_times_path = (
+    f"results/all_service_times_{simulation_settings['mapf_control']}_"
+    f"{simulation_settings['grid_size']-2}_{simulation_settings['n_agents']}.txt"
+)
+with open(service_times_path, "w+") as f:
+    for time in all_service_times:
+        f.write(str(time))
+        f.write("\n")
+
+print(f"\nStored {len(all_task_times)} task times in {task_times_path}")
+print(f"Stored {len(all_service_times)} service times in {service_times_path}")
+
