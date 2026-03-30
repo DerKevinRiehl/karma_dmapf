@@ -55,9 +55,9 @@ results_summary = {}
 # Define base simulation settings
 base_simulation_settings = {
     "time_horizon_visualization": 10,
-    "time_simulation_duration": 1000,
+    "time_simulation_duration": 100,
     "params_astar": {
-        "max_iterations": 5000,
+        "max_iterations": 1e5,
         "planning_horizon": 50,
         "planning_horizon_buffer": 20,
     },

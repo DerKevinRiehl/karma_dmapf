@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
 folder = "../log_files/analysis_2/"
+FIGURE_WIDTH = 6.0
+FIGURE_HEIGHT = 8.0 
 
 controller_file_names = [
     "DECENTRALIZED_RESPECT",
@@ -105,7 +107,7 @@ data_10 = load_grid_data("10", "30")
 data_15 = load_grid_data("15", "80")
 
 
-fig = plt.figure(figsize=(6.0, 8.0))
+fig = plt.figure(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT))
 
 plot_paired_boxplots(
     plt.subplot(3, 1, 1),

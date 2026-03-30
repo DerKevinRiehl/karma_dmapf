@@ -4,15 +4,8 @@ import pandas as pd
 import json
 
 folder = "../log_files/analysis_1/"
-
-grid_sizes = ["5", "10", "15", "20"]
-
-controllers = [
-    "DECENTRALIZED_RESPECT",
-    "DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    "DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    "DECENTRALIZED_NEGOTIATE_ALTRUISTIC2",
-]
+FIGURE_WIDTH = 6.0*2
+FIGURE_HEIGHT = 8.0 
 
 controller_labels = [
     "Token Passing",
@@ -42,6 +35,12 @@ row_labels = [
     "Avg. Service Time [s]",
 ]
 
+factors = [
+    10/4,
+    10,
+    10
+]
+
 # measures = [
 #     'A* Calls',
 #     'Completed Tasks',
@@ -57,7 +56,7 @@ row_labels = [
 # ]
 
 
-def load_data(grid_size, controller, measure):
+def load_data(grid_size, controller, measure, factor=1):
     # grid_size = "5"
     # controller = "DECENTRALIZED_RESPECT"
     # measure = "Completed Tasks"
@@ -70,129 +69,201 @@ def load_data(grid_size, controller, measure):
         std = np.std(data_dict[grid_size][controller]["raw_data"][n_agent][measure])
         df.append([n_agent, mean, std])
     df = pd.DataFrame(df, columns=["n", "mean", "std"])
-    df["mean"] = df["mean"].rolling(window=3, center=True, min_periods=1).median()
-    df["std"] = df["std"].rolling(window=3, center=True, min_periods=1).median()
+    df["mean"] = df["mean"].rolling(window=3, center=True, min_periods=1).median()*factor
+    df["std"] = df["std"].rolling(window=3, center=True, min_periods=1).median()*factor
     return df
 
 
 df_respect = load_data(
-    grid_size="5", controller="DECENTRALIZED_RESPECT", measure=row_measures[0]
+    grid_size="5", 
+    controller="DECENTRALIZED_RESPECT", 
+    measure=row_measures[0], 
+    factor=factors[0]
 )
 df_neg_ego = load_data(
     grid_size="5",
     controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[0],
+    measure=row_measures[0], 
+    factor=factors[0]
 )
 df_neg_alt = load_data(
     grid_size="5",
     controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[0],
+    measure=row_measures[0], 
+    factor=factors[0]
 )
-controller_dfs_5_rw1 = [df_respect, df_neg_ego, df_neg_alt]
+df_neg_kar = load_data(
+    grid_size="5",
+    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
+    measure=row_measures[0], 
+    factor=factors[0]
+)
+controller_dfs_5_rw1 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
 df_respect = load_data(
-    grid_size="10", controller="DECENTRALIZED_RESPECT", measure=row_measures[0]
+    grid_size="10", 
+    controller="DECENTRALIZED_RESPECT", 
+    measure=row_measures[0],  
+    factor=factors[1]
 )
 df_neg_ego = load_data(
     grid_size="10",
     controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[0],
+    measure=row_measures[0],  
+    factor=factors[1]
 )
 df_neg_alt = load_data(
     grid_size="10",
     controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[0],
+    measure=row_measures[0],  
+    factor=factors[1]
 )
-controller_dfs_10_rw1 = [df_respect, df_neg_ego, df_neg_alt]
+df_neg_kar = load_data(
+    grid_size="10",
+    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
+    measure=row_measures[0],  
+    factor=factors[1]
+)
+controller_dfs_10_rw1 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
 
 df_respect = load_data(
-    grid_size="5", controller="DECENTRALIZED_RESPECT", measure=row_measures[1]
+    grid_size="5", 
+    controller="DECENTRALIZED_RESPECT", 
+    measure=row_measures[1],   
+    factor=factors[0]
 )
 df_neg_ego = load_data(
     grid_size="5",
     controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[1],
+    measure=row_measures[1],   
+    factor=factors[0]
 )
 df_neg_alt = load_data(
     grid_size="5",
     controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[1],
+    measure=row_measures[1],   
+    factor=factors[0]
 )
-controller_dfs_5_rw2 = [df_respect, df_neg_ego, df_neg_alt]
+df_neg_kar = load_data(
+    grid_size="5",
+    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
+    measure=row_measures[1],   
+    factor=factors[0]
+)
+controller_dfs_5_rw2 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
 df_respect = load_data(
-    grid_size="10", controller="DECENTRALIZED_RESPECT", measure=row_measures[1]
+    grid_size="10", 
+    controller="DECENTRALIZED_RESPECT", 
+    measure=row_measures[1],    
+    factor=factors[1]
 )
 df_neg_ego = load_data(
     grid_size="10",
     controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[1],
+    measure=row_measures[1],    
+    factor=factors[1]
 )
 df_neg_alt = load_data(
     grid_size="10",
     controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[1],
+    measure=row_measures[1],    
+    factor=factors[1]
 )
-controller_dfs_10_rw2 = [df_respect, df_neg_ego, df_neg_alt]
+df_neg_kar = load_data(
+    grid_size="10",
+    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
+    measure=row_measures[1],    
+    factor=factors[1]
+)
+controller_dfs_10_rw2 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
 
 df_respect = load_data(
-    grid_size="5", controller="DECENTRALIZED_RESPECT", measure=row_measures[2]
+    grid_size="5", 
+    controller="DECENTRALIZED_RESPECT", 
+    measure=row_measures[2],     
 )
 df_neg_ego = load_data(
     grid_size="5",
     controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[2],
+    measure=row_measures[2],     
 )
 df_neg_alt = load_data(
     grid_size="5",
     controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[2],
+    measure=row_measures[2],     
 )
-controller_dfs_5_rw3 = [df_respect, df_neg_ego, df_neg_alt]
+df_neg_kar = load_data(
+    grid_size="5",
+    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
+    measure=row_measures[2],     
+)
+controller_dfs_5_rw3 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
 df_respect = load_data(
-    grid_size="10", controller="DECENTRALIZED_RESPECT", measure=row_measures[2]
+    grid_size="10", 
+    controller="DECENTRALIZED_RESPECT", 
+    measure=row_measures[2],      
 )
 df_neg_ego = load_data(
     grid_size="10",
     controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[2],
+    measure=row_measures[2],     
 )
 df_neg_alt = load_data(
     grid_size="10",
     controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[2],
+    measure=row_measures[2],      
 )
-controller_dfs_10_rw3 = [df_respect, df_neg_ego, df_neg_alt]
+df_neg_kar = load_data(
+    grid_size="10",
+    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
+    measure=row_measures[2],      
+)
+controller_dfs_10_rw3 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
 
 df_respect = load_data(
-    grid_size="5", controller="DECENTRALIZED_RESPECT", measure=row_measures[3]
+    grid_size="5", 
+    controller="DECENTRALIZED_RESPECT", 
+    measure=row_measures[3],     
 )
 df_neg_ego = load_data(
     grid_size="5",
     controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
+    measure=row_measures[3],      
+)
+df_neg_alt = load_data(
+    grid_size="5",
+    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
+    measure=row_measures[3],      
+)
+df_neg_kar = load_data(
+    grid_size="5",
+    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
+    measure=row_measures[3],     
+)
+controller_dfs_5_rw4 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
+df_respect = load_data(
+    grid_size="10", 
+    controller="DECENTRALIZED_RESPECT", 
+    measure=row_measures[3],     
+)
+df_neg_ego = load_data(
+    grid_size="10",
+    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
+    measure=row_measures[3], 
+)
+df_neg_alt = load_data(
+    grid_size="10",
+    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
     measure=row_measures[3],
 )
-df_neg_alt = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[3],
-)
-controller_dfs_5_rw4 = [df_respect, df_neg_ego]
-df_respect = load_data(
-    grid_size="10", controller="DECENTRALIZED_RESPECT", measure=row_measures[3]
-)
-df_neg_ego = load_data(
+df_neg_kar = load_data(
     grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[3],
+    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
+    measure=row_measures[3], 
 )
-df_neg_alt = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[3],
-)
-controller_dfs_10_rw4 = [df_respect, df_neg_ego, df_neg_alt]
+controller_dfs_10_rw4 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
 
 
-plt.figure(figsize=(6.0*2, 8.0))
+plt.figure(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT))
 
 plt.subplot(3, 4, 1 + 4 * 0)
 plt.title(row_labels[0], fontweight="bold")
