@@ -11,15 +11,18 @@ import copy
 import json
 import logging
 import multiprocessing
-from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
-
+from time import perf_counter
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from pathlib import Path
+from tqdm import tqdm
+from typing import Any, Dict, Iterable, List, Tuple
+
 
 from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC2,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
@@ -40,12 +43,15 @@ logger = logging.getLogger(__name__)
 GRID_SIZE_BASE = 5
 # Agent counts selected per grid size (keep 5-grid scenario unchanged)
 AGENTS_BY_GRID: Dict[int, List[int]] = {
-    5: [8, 12, 16],
+    5: [6, 8, 10],  # [6, 8, 10],  # max 10
+    # 10: [10, 20, 30],  # max 30
+    # 15: [10, 40, 80],  # max 80
+    # 20: [15, 50, 130, 180],  # max 180
 }
 AGENT_COUNTS = AGENTS_BY_GRID[GRID_SIZE_BASE]
 RANDOM_SEEDS = [41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
-KARMA_INFLUENCES = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
-DELTA_THRESHOLDS = [0.5, 1.5]
+KARMA_INFLUENCES = [0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0]
+DELTA_THRESHOLDS = [0.5]  # [0.5, 1.5]
 RECOMPUTE_RESULTS = True  # set to False to load cached CSV/JSON and skip reruns
 
 # Output locations
@@ -59,6 +65,7 @@ ALL_CONTROLLERS = [
     MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC2,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
 ]
@@ -71,7 +78,7 @@ BASE_SIMULATION_SETTINGS: Dict[str, Any] = {
     "time_horizon_visualization": 10,
     "time_simulation_duration": 1000,
     "params_astar": {
-        "max_iterations": 5000,
+        "max_iterations": 1e5,
         "planning_horizon": 50,
         "planning_horizon_buffer": 20,
     },
@@ -82,7 +89,7 @@ BASE_SIMULATION_SETTINGS: Dict[str, Any] = {
     },
     "params_karma": {
         "initial_karma": 0,
-        "delta_threshold": 1.0,
+        "delta_threshold": 0,
         "karma_payment": 1,
         "karma_influence": 0.2,
     },
@@ -137,7 +144,18 @@ def _run_seed_job(args: Tuple[str, float, float, int, int]) -> Dict[str, Any]:
     )
     settings["params_karma"]["karma_influence"] = karma_influence
     settings["params_karma"]["delta_threshold"] = delta_threshold
+    start_ts = perf_counter()
     metrics = run_single_simulation(settings)
+    duration_sec = perf_counter() - start_ts
+    logger.info(
+        "\nSeed run finished | ctrl=%s agents=%d influence=%.2f delta=%.2f seed=%d duration=%.2fs",
+        controller,
+        n_agents,
+        karma_influence,
+        delta_threshold,
+        seed,
+        duration_sec,
+    )
     return {
         "controller": controller,
         "karma_influence": karma_influence,
@@ -145,6 +163,7 @@ def _run_seed_job(args: Tuple[str, float, float, int, int]) -> Dict[str, Any]:
         "n_agents": n_agents,
         "seed": seed,
         "metrics": metrics,
+        "duration_seconds": duration_sec,
     }
 
 
@@ -171,7 +190,11 @@ def run_single_simulation(simulation_settings: Dict[str, Any]) -> Dict[str, floa
         env.spawn_task()
 
     n_astar_calls = 0
-    while env.time < env.settings["time_simulation_duration"]:
+    for _ in tqdm(
+        range(env.settings["time_simulation_duration"]),
+        total=env.settings["time_simulation_duration"],
+        desc="Sim time steps",
+    ):
         env.time += 1
         env.handle_agents()
         while len(env.tasks) < len(env.agents):
