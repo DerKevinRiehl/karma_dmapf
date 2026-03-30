@@ -5,6 +5,9 @@ __pycache__/
 *$py.class
 .DS_Store
 
+./fig_animation/*
+./src/results/*
+
 # C extensions
 *.so
 
