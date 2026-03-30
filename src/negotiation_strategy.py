@@ -68,29 +68,6 @@ class NegotiationStrategy:
         agent_self: Agent,
         karma_params,
     ) -> bool:
-        # agreement_to_solve_conflict: bool
-        # if cost_other <= 0:
-        #     agreement_to_solve_conflict = True
-        # else:
-        #     if cost_mine > cost_other:
-        #         cost_delta = cost_mine - cost_other
-        #         if cost_delta >= karma_params["delta_threshold"]:
-        #             if agent_self.karma_balance >= karma_params["karma_payment"]:
-        #                 agreement_to_solve_conflict = True
-        #                 agent_self.karma_balance = (
-        #                     agent_self.karma_balance - karma_params["karma_payment"]
-        #                 )
-        #                 agent_other.karma_balance = (
-        #                     agent_other.karma_balance + karma_params["karma_payment"]
-        #                 )
-        #             else:
-        #                 agreement_to_solve_conflict = False
-        #         else:
-        #             agreement_to_solve_conflict = False
-        #     else:
-        #         agreement_to_solve_conflict = False
-        # return agreement_to_solve_conflict
-
         # initialize negotiation agreement parameters
         other_resolves_conflict: bool
 
@@ -105,18 +82,14 @@ class NegotiationStrategy:
         if cost_mine_adjusted - cost_other_adjusted > karma_params["delta_threshold"]:
             # if the agent's own cost is sufficiently higher than the other agent's cost, the other agent has to resolve the conflict
             other_resolves_conflict = True
-        elif np.isclose(
-            cost_mine_adjusted - cost_other_adjusted,
-            karma_params["delta_threshold"],
-            atol=1e-3,
-        ):
-            # if the difference of adjusted costs is close to the threshold, we randomize the decision to avoid systematic bias
+        elif cost_mine_adjusted - cost_other_adjusted < karma_params["delta_threshold"]:
+            # if difference of augmented costs is zero or below threshold, this agent has to resolve the conflict
+            other_resolves_conflict = False
+        else:
+            # if the difference of adjusted costs is equal to the threshold, we randomize the decision to avoid systematic bias
             other_resolves_conflict = bool(
                 agent_self.environment.rng.choice([True, False])
             )
-        else:
-            # if difference of augmented costs is zero or below threshold, this agent has to resolve the conflict
-            other_resolves_conflict = False
 
         payment = NegotiationStrategy._karma_payment_rule(
             cost_mine,

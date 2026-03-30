@@ -32,6 +32,63 @@ from constants import (
 os.makedirs("results", exist_ok=True)
 
 
+random_seeds = range(41, 51)
+grid_sizes = [5]  # , 10, 15, 20]
+
+controllers = [
+    # MAPF_CONTROLLER_CENTRALIZED,
+    # MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+    # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
+    # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
+]
+
+n_agents_map = {
+    5: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],  # max 10
+    10: [1, 3, 9, 12, 15, 18, 21, 24, 27, 30],  # max 30
+    15: [1, 10, 15, 20, 30, 40, 50, 60, 70, 80],  # max 80
+    20: [1, 15, 30, 45, 60, 75, 100, 130, 160, 180],  # max 180
+}
+results_summary = {}
+
+# Define base simulation settings
+base_simulation_settings = {
+    "time_horizon_visualization": 10,
+    "time_simulation_duration": 1000,
+    "params_astar": {
+        "max_iterations": 5000,
+        "planning_horizon": 50,
+        "planning_horizon_buffer": 20,
+    },
+    "params_cbs": {
+        "max_iterations": 5000,
+        "MAX_IDLE_TIME_CONSIDERED": 5,
+        "PLANNING_HORIZON": 100,
+    },
+    "params_karma": {
+        "initial_karma": 0,
+        "delta_threshold": 0,
+        "karma_influence": 0.5,
+    },
+    "debug_statements": False,
+}
+
+METRIC_NAMES = [
+    "A* Calls",
+    "Completed Tasks",
+    "Total Task Time (incl. Reallocation) (all agents)",
+    "Avg Task Time (incl. Reallocation) (all agents)",
+    "Std Task Time (incl. Reallocation) (all agents)",
+    "Total Service Time (all agents)",
+    "Avg Service Time (all agents)",
+    "Std Service Time (all agents)",
+    "Avg Service Time Increase (%) (all agents)",
+    "Avg Service Time (per agent mean)",
+    "Avg Service Increase (%) (per agent mean)",
+]
+
+
 def get_markdown_table_str(title, data, algorithms, agents):
     # data[algo][agent] -> (mean, std, median, gini, iqr)
 
@@ -205,63 +262,6 @@ def _plot_box(
     plt.close(fig)
     print(f"Saved plot: {filepath}")
 
-
-random_seeds = range(41, 51)
-grid_sizes = [5]  # , 10, 15, 20]
-
-controllers = [
-    # MAPF_CONTROLLER_CENTRALIZED,
-    # MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
-    # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
-    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
-    # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
-    # MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
-]
-
-n_agents_map = {
-    5:  [1, 2,  3,   4,  5,  6,   7,   8,   9, 10], # max 10
-    10: [1, 3,  9,  12, 15, 18,  21,  24,  27, 30], # max 30
-    15: [1, 10, 15, 20, 30, 40,  50,  60,  70, 80], # max 80
-    20: [1, 15, 30, 45, 60, 75, 100, 130, 160, 180], # max 180
-}
-results_summary = {}
-
-# Define base simulation settings
-base_simulation_settings = {
-    "time_horizon_visualization": 10,
-    "time_simulation_duration": 1000,
-    "params_astar": {
-        "max_iterations": 5000,
-        "planning_horizon": 50,
-        "planning_horizon_buffer": 20,
-    },
-    "params_cbs": {
-        "max_iterations": 5000,
-        "MAX_IDLE_TIME_CONSIDERED": 5,
-        "PLANNING_HORIZON": 100,
-    },
-    "params_karma": {
-        "initial_karma": 0,
-        "delta_threshold": 1,
-        "karma_payment": 1,
-        "karma_influence": 0.2,
-    },
-    "debug_statements": False,
-}
-
-METRIC_NAMES = [
-    "A* Calls",
-    "Completed Tasks",
-    "Total Task Time (incl. Reallocation) (all agents)",
-    "Avg Task Time (incl. Reallocation) (all agents)",
-    "Std Task Time (incl. Reallocation) (all agents)",
-    "Total Service Time (all agents)",
-    "Avg Service Time (all agents)",
-    "Std Service Time (all agents)",
-    "Avg Service Time Increase (%) (all agents)",
-    "Avg Service Time (per agent mean)",
-    "Avg Service Increase (%) (per agent mean)",
-]
 
 # clear summary file
 with open("results/summary.txt", "w") as f:
