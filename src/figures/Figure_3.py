@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+
+folder = "log_files/analysis_3/"
+
 METRIC_NAME = "Avg Service Time Increase (%) (all agents)"
 SUMMARY_FILENAME = "summary_grid10_agents30_T100.json"  # keep in sync with generator
 
@@ -27,7 +30,7 @@ CONTROLLER_COLORS = {
 
 def load_summary() -> tuple[pd.DataFrame, dict]:
     base_dir = Path(__file__).resolve().parent.parent
-    summary_path = base_dir / "logs_js" / SUMMARY_FILENAME
+    summary_path = base_dir / folder / SUMMARY_FILENAME
     data = json.loads(summary_path.read_text())
     summary_df = pd.DataFrame(data.get("summary", []))
     metadata = data.get("metadata", {})
