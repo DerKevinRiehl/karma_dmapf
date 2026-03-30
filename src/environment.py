@@ -533,7 +533,7 @@ class Environment:
                 if self.settings["debug_statements"]:
                     print("\t\t Outcome", agreement_to_solve_conflict)
 
-                if agreement_to_solve_conflict:
+                if agreement_to_solve_conflict and alternative_path_other is not None:
                     conflicting_agent.change_path_to_satisfy(
                         change_to_path=alternative_path_other
                     )
