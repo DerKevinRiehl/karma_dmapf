@@ -10,6 +10,8 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC2,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC2,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
 )
@@ -26,15 +28,13 @@ class Environment:
         self.settings: Dict[str, Any] = settings
         self.grid: Grid = Grid(grid_size=self.settings["grid_size"])
         self.static_grid: Grid = Grid(grid_size=self.settings["grid_size"])
+        self.rng = np.random.default_rng(self.settings["random_seed"])
         self.time: int = 0
         self.agents: List[Agent] = []
         self.tasks: List[Task] = []
         self.completed_tasks: dict[int, List[Task]] = (
             {}
         )  # mapping: agent_id -> list of completed tasks
-
-        # set random seed
-        np.random.seed(self.settings["random_seed"])
 
     def determine_new_id(self, lst: Union[List[Agent], List[Task]]) -> int:
         last_id = 0
@@ -123,7 +123,27 @@ class Environment:
             == MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC
         ):
             self.handle_agents_route_planning_decentralized_negotiate(
-                NegotiationStrategy.negotiate_altruistic
+                lambda cost_other, cost_mine: NegotiationStrategy.negotiate_altruistic(
+                    cost_other, cost_mine, rng=self.rng
+                )
+            )
+        elif (
+            self.settings["mapf_control"]
+            == MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC2
+        ):
+            self.handle_agents_route_planning_decentralized_negotiate(
+                NegotiationStrategy.negotiate_egoistic, 
+                cost_transform=True
+            )
+        elif (
+            self.settings["mapf_control"]
+            == MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC2
+        ):
+            self.handle_agents_route_planning_decentralized_negotiate(
+                lambda cost_other, cost_mine: NegotiationStrategy.negotiate_altruistic(
+                    cost_other, cost_mine, rng=self.rng
+                ), 
+                cost_transform=True
             )
         elif (
             self.settings["mapf_control"]
@@ -242,8 +262,106 @@ class Environment:
         for agent in planning_relevant_agents:
             agent.plan_route_decentralized_respectful()
 
+    def plan_shortest_path_given_considerations(self, agents_considered, agent):
+        reservation_grid = GridTools.create_3D_reservation_grid(
+            environment=self,
+            time_horizon=self.get_sufficient_planning_horizon(),
+            agent_list=agents_considered,
+            tabu_agent=agent,
+        )
+        if agent.path_planner is None:
+            raise Exception(
+                f"Agent {agent.id} has no path planner assigned, cannot plan route."
+            )
+        current_path = agent.path_planner.astar(
+            start=(
+                agent.current_position[0],
+                agent.current_position[1],
+                agent.current_orientation,
+            ),
+            goal=(agent.target_position[0], agent.target_position[1]),
+            reservation_grid=reservation_grid,
+        )
+        return current_path
+    
+    def determine_conflicts(self, current_path, agent):
+        # rebuild full reservation table each iteration so we always check conflicts against the
+        # latest routes other agents may have switched to during negotiation
+        conflicts = GridTools.detect_conflicts(
+            current_path,
+            agent_list=self.agents,
+            time_horizon=self.get_sufficient_planning_horizon(),
+            tabu_agent=agent,
+        )
+        return conflicts
+
+    def prioritize_conflicts(self, conflicts, agents_considered, agent, current_path):
+        current_path_cost = len(current_path)
+        conflict_costs = []
+
+        for conflict in conflicts:
+            conflicting_agent = self.get_agent(conflict["conflicting_agent"])
+            if conflicting_agent is None:
+                raise Exception(
+                    f"Conflict with agent id {conflict['conflicting_agent']} but no such agent found."
+                )
+
+            hypothetical_agents_considered = agents_considered.copy()
+            hypothetical_agents_considered.append(conflicting_agent)
+            hypothetical_path = self.plan_shortest_path_given_considerations(
+                hypothetical_agents_considered, agent
+            )
+            hypothetical_path_cost = (
+                len(hypothetical_path)
+                if hypothetical_path is not None
+                else float("inf")
+            )
+            conflict_costs.append(hypothetical_path_cost - current_path_cost)
+
+        conflicts = [
+            conflict
+            for _, conflict in sorted(
+                zip(conflict_costs, conflicts), key=lambda item: item[0], reverse=True
+            )
+        ]
+        return conflicts, conflict_costs
+        
+    def determine_my_cost(self, agent, conflicting_agent, current_path):
+        route = agent.path_planner.convert_path_to_route(current_path)
+        original_route = list(agent.route)
+        agent.route = route if route else []
+        path = conflicting_agent.path_planner.convert_route_to_path(conflicting_agent)
+        cost_mine: float = float("inf")
+        try:
+            if path:
+                cost_mine, alternative_path_mine = agent.determine_cost_to_change(
+                    to_avoid_path=path
+                )
+            else:
+                raise ValueError(
+                    f"Path found for conflicting agent {conflicting_agent.id} but could not be converted to route."
+                )
+        finally:
+            agent.route = original_route
+        return cost_mine, alternative_path_mine
+    
+    def make_decision(self, agent, conflicting_agent, cost_other, cost_mine, negotiation_function, use_agent_params):
+        if use_agent_params:
+            agreement_to_solve_conflict = negotiation_function(
+                cost_other,
+                cost_mine,
+                conflicting_agent,
+                agent,
+                self.settings["params_karma"],
+            )
+        else:
+            agreement_to_solve_conflict = negotiation_function(
+                cost_other, cost_mine
+            )
+        return agreement_to_solve_conflict
+    
     def handle_agents_route_planning_decentralized_negotiate(
-        self, negotiation_function: Callable, use_agent_params: bool = False
+        self, negotiation_function: Callable, cost_transform : bool = False, use_agent_params: bool = False
     ) -> None:
         """
         This works as follows: every new agent will plan its route shortest.
@@ -265,214 +383,81 @@ class Environment:
             and len(agent.target_position) == 2
         ]
 
-        agents_already_negotiated = []
-
         for agent in planning_relevant_agents:
-            # if due to negotiation already changed...
-            if agent in agents_already_negotiated:
-                continue
+            # if due to negotiation already changed...skip
             if len(agent.route) > 0:
                 continue
 
             # try for this agent to plan, given the restrictions it step by step considers
-            planning_finished: bool = False
             agents_considered: List[Agent] = []
-
-            # determine plan with negotiating with others
             current_path: Optional[List[PathPlannerState]] = None
-            agents_had_conflict_with: List[Agent] = []
+            found_conflict_free_path: bool = False
 
-            # safety guard to avoid infinite negotiation loops
+            # # safety guard to avoid infinite negotiation loops
             max_iterations: int = max(10, len(self.agents) * 2)
             iter_count: int = 0
 
-            while not planning_finished:
+            # iterate until no open conflicts exist
+            while True:
                 iter_count += 1
                 if iter_count > max_iterations:
-                    if self.settings["debug_statements"]:
-                        print(
-                            f"\tMax negotiation iterations reached for agent {agent.id}, aborting negotiation"
-                        )
                     break
-
-                if self.settings["debug_statements"]:
-                    print(
-                        "\ttrying to finish planning for agent",
-                        agent.id,
-                        "considered:",
-                        len(agents_considered),
-                    )
+                
                 # determine shortest path (given considered restrictions)
-                reservation_grid = GridTools.create_3D_reservation_grid(
-                    environment=self,
-                    time_horizon=self.get_sufficient_planning_horizon(),
-                    agent_list=agents_considered,
-                    tabu_agent=agent,
-                )
-                if agent.path_planner is None:
-                    raise Exception(
-                        f"Agent {agent.id} has no path planner assigned, cannot plan route."
-                    )
-
-                current_path = agent.path_planner.astar(
-                    start=(
-                        agent.current_position[0],
-                        agent.current_position[1],
-                        agent.current_orientation,
-                    ),
-                    goal=(agent.target_position[0], agent.target_position[1]),
-                    reservation_grid=reservation_grid,
-                )
-
-                # if cannot plan, just abort for now
-                if current_path is None:
-                    planning_finished = True
+                current_path = self.plan_shortest_path_given_considerations(agents_considered, agent)
+                if current_path is None: # if cannot plan, just abort for now
                     break
 
-                # rebuild full reservation table each iteration so we always check conflicts against the
-                # latest routes other agents may have switched to during negotiation
                 # determine conflicts with current plan
-                conflicts = GridTools.detect_conflicts(
-                    current_path,
-                    agent_list=self.agents,
-                    time_horizon=self.get_sufficient_planning_horizon(),
-                    tabu_agent=agent,
-                )
-
-                # if no conflicts, found the path and can quit
-                if len(conflicts) == 0:
-                    planning_finished = True
+                conflicts = self.determine_conflicts(current_path, agent)
+                if len(conflicts) == 0: # if no conflicts, found the path and can quit
+                    found_conflict_free_path = True
                     break
 
-                # try to solve found conflicts
+                # prioritise conflicts
+                conflicts, conflict_costs = self.prioritize_conflicts(conflicts, agents_considered, agent, current_path)
+                top_priority_conflict = conflicts[0]
                 if self.settings["debug_statements"]:
-                    print(
-                        "\tplanning for agent",
-                        agent.id,
-                        "found",
-                        len(conflicts),
-                        "conflicts",
-                    )
-
-                # try to resolve conflicts with everyone
-                all_conflicts_resolved: bool = True
-                route_snapshot: Dict[int, List[str]] = {
-                    other_agent.id: other_agent.route.copy()
-                    for other_agent in self.agents
-                }
-                karma_snapshot: Dict[int, int] = {
-                    other_agent.id: other_agent.karma_balance
-                    for other_agent in self.agents
-                }
-                negotiated_agents_in_iteration: List[Agent] = []
-                for conflict in conflicts:
-                    if self.settings["debug_statements"]:
-                        print("\tchecking the conflict", conflict)
-                    conflicting_agent = self.get_agent(conflict["conflicting_agent"])
-                    if conflicting_agent is None:
-                        raise Exception(
-                            f"Conflict with agent id {conflict['conflicting_agent']} but no such agent found."
-                        )
-
-                    # determine cost other
-                    cost_other, alternative_path_other = (
-                        conflicting_agent.determine_cost_to_change(
-                            to_avoid_path=current_path
-                        )
-                    )
-                    # determine my cost
-                    route = agent.path_planner.convert_path_to_route(current_path)
-                    agent.route = route if route else []
-
-                    path = conflicting_agent.path_planner.convert_route_to_path(
-                        conflicting_agent
-                    )
-                    cost_mine: float = float("inf")
-                    if path:
-                        cost_mine, alternative_path_mine = (
-                            agent.determine_cost_to_change(to_avoid_path=path)
-                        )
-                    else:
-                        raise ValueError(
-                            f"Path found for conflicting agent {conflicting_agent.id} but could not be converted to route."
-                        )
-
-                    # determine decision - negotiation outcome - egoistic
-                    agent.route = []
-                    if use_agent_params:
-                        agreement_to_solve_conflict = negotiation_function(
-                            cost_other,
-                            cost_mine,
-                            conflicting_agent,
-                            agent,
-                            self.settings["params_karma"],
-                        )
-                    else:
-                        agreement_to_solve_conflict = negotiation_function(
-                            cost_other, cost_mine
-                        )
-
-                    # if agrees, continue
-                    if agreement_to_solve_conflict:
-                        if alternative_path_other is not None:
-                            conflicting_agent.change_path_to_satisfy(
-                                change_to_path=alternative_path_other
-                            )
-                            if conflicting_agent not in negotiated_agents_in_iteration:
-                                negotiated_agents_in_iteration.append(conflicting_agent)
-                        else:
-                            all_conflicts_resolved = False
-                            break
-                        continue
-
-                    # otherwise, break the loop
-                    else:
-                        all_conflicts_resolved = False
-                        break
-
-                # if others changed their plans and agreed, we can keep this
-                if all_conflicts_resolved:
-                    remaining_conflicts = GridTools.detect_conflicts(
-                        current_path,
-                        agent_list=self.agents,
-                        time_horizon=self.get_sufficient_planning_horizon(),
-                        tabu_agent=agent,
-                    )
-                    if len(remaining_conflicts) == 0:
-                        for negotiated_agent in negotiated_agents_in_iteration:
-                            if negotiated_agent not in agents_already_negotiated:
-                                agents_already_negotiated.append(negotiated_agent)
-                        planning_finished = True
-                        break
-
-                    all_conflicts_resolved = False
-                    conflicts = remaining_conflicts
-
-                if not all_conflicts_resolved:
-                    for other_agent in self.agents:
-                        other_agent.route = route_snapshot[other_agent.id].copy()
-                        other_agent.karma_balance = karma_snapshot[other_agent.id]
-
-                # otherwise, didnt work out, so we have to add them into our agents_considered constraints
-                for conflict in conflicts:
-                    conflicting_agent = self.get_agent(conflict["conflicting_agent"])
-                    if conflicting_agent is None:
-                        continue
-
+                    print( "\tplanning for agent",agent.id, "found",len(conflicts),"conflicts",)
+                conflicting_agent = self.get_agent(top_priority_conflict["conflicting_agent"])
+                if conflicting_agent is None:
+                    raise Exception(f"Conflict with agent id {top_priority_conflict['conflicting_agent']} but no such agent found.")
+                
+                # solve conflict
+                    # determine costs
+                change_cost_other, alternative_path_other = conflicting_agent.determine_cost_to_change(to_avoid_path=current_path)
+                change_cost_mine, alternative_path_mine = self.determine_my_cost(agent, conflicting_agent, current_path)
+                if alternative_path_other is None:
+                    agreement_to_solve_conflict = False
+                else:    
+                    if cost_transform and conflicting_agent.minimal_path_cost is not None:
+                        # transform cost
+                        cost_other_min = conflicting_agent.minimal_path_cost
+                        cost_mine_min = agent.minimal_path_cost
+                        cost_other_realized = conflicting_agent.get_forecasted_path_total_cost()
+                        cost_mine_realized = agent.get_forecasted_path_total_cost() + len(current_path) # because agent.route is not set yet
+                        deviation_other_before = cost_other_realized / cost_other_min
+                        deviation_other_after = (cost_other_realized + change_cost_other) / cost_other_min
+                        deviation_mine_before = cost_mine_realized / cost_mine_min
+                        deviation_mine_after = (cost_mine_realized + change_cost_mine) / cost_mine_min
+                        # print(">>")
+                        # print(conflicting_agent.id, conflicting_agent.status, ":", cost_other_min, cost_other_realized, ",", change_cost_other, deviation_other_before, deviation_other_after)
+                        # print(agent.id, agent.status, ":", cost_mine_min, cost_mine_realized, change_cost_mine, ",", deviation_mine_before, deviation_mine_after)
+                        # print(">>")
+                        change_cost_other = deviation_other_after - deviation_other_before
+                        change_cost_mine = deviation_mine_after - deviation_mine_before
+                        # make decision
+                    agreement_to_solve_conflict = self.make_decision(agent, conflicting_agent, change_cost_other, change_cost_mine, negotiation_function, use_agent_params)
+                    # execute decision
+                if agreement_to_solve_conflict:
+                    conflicting_agent.change_path_to_satisfy(change_to_path=alternative_path_other)
+                else:
                     agents_considered.append(conflicting_agent)
-                    agents_considered = list(set(agents_considered))
-                    if conflicting_agent not in agents_had_conflict_with:
-                        agents_had_conflict_with.append(conflicting_agent)
-                    else:  # repeating conflicts, avoid inifinite loop
-                        current_path = None
-                        planning_finished = True
-                        break
-
-            # if successful, assign it
-            if current_path is not None:
+                
+            # Assign final route
+            if current_path is not None and found_conflict_free_path:
                 current_route = agent.path_planner.convert_path_to_route(current_path)
                 agent.route = current_route if current_route else []
-
                 if self.settings["debug_statements"]:
                     print("\tsuccessfully done")
             else:

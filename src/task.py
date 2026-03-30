@@ -15,14 +15,16 @@ class Task:
         self.grid: "Grid" = grid
         # this is to make sure that no origin or destination is set to the origin or destination of any other task or current position of robot
         # this facilitate solving path planning and less often gets aborted
-        from_pos = grid.get_random_empty_square_no_tasks(environment)
+        from_pos = grid.get_random_empty_square_no_tasks(
+            environment, rng=environment.rng
+        )
         if from_pos is None:
             # print(grid.occupancy_grid)
             raise Exception("No valid start position for task found")
         self.from_position: List[int] = from_pos
 
         to_pos = grid.get_random_empty_square_no_tasks(
-            environment, pos=self.from_position
+            environment, pos=self.from_position, rng=environment.rng
         )
         if to_pos is None:
             # print(grid.occupancy_grid)

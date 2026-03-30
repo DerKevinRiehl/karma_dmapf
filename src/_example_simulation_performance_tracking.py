@@ -98,8 +98,8 @@ for random_seed in range(41, 51):
         environment.assign_open_tasks()
         closed = environment.close_finished_tasks()
         # report A-STAR Calls
-        n_astar_calls += AStarPathPlanner.COUNTER
-        AStarPathPlanner.COUNTER = 0
+        n_astar_calls += AStarPathPlanner.get_counter()
+        AStarPathPlanner.reset_counter()
 
     # evaluation
     all_completed_tasks = [

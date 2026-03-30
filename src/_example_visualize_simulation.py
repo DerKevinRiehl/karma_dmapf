@@ -19,6 +19,8 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC2,
+    MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC2,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
 )
@@ -28,12 +30,12 @@ from constants import (
 ###############################################################################
 simulation_settings = {
     "random_seed": 42,
-    "grid_size": 20 + 2,  # 15,
-    "n_agents": 180,
+    "grid_size": 5 + 2,  # 15,
+    "n_agents": 10,
     # "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
-    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
-    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
+    "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
+    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
     "time_horizon_visualization": 10,
@@ -135,8 +137,8 @@ while environment.time < environment.settings["time_simulation_duration"]:
     check_violation(environment, previous_positions)
 
     # report A-STAR Calls
-    print("\tA-Star Calls:", AStarPathPlanner.COUNTER)
-    AStarPathPlanner.COUNTER = 0
+    print("\tA-Star Calls:", AStarPathPlanner.get_counter())
+    AStarPathPlanner.reset_counter()
 
 os.makedirs("results", exist_ok=True)
 make_gif(

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 import numpy as np
 
 if TYPE_CHECKING:
@@ -22,7 +22,9 @@ class NegotiationStrategy:
         return agreement_to_solve_conflict
 
     @staticmethod
-    def negotiate_altruistic(cost_other: int, cost_mine: int) -> bool:
+    def negotiate_altruistic(
+        cost_other: int, cost_mine: int, rng: Optional[Any] = None
+    ) -> bool:
         # who is worse off?
         agreement_to_solve_conflict: bool
         if cost_mine > cost_other:
@@ -30,7 +32,9 @@ class NegotiationStrategy:
         elif cost_mine < cost_other:
             agreement_to_solve_conflict = False
         else:  # cost_mine == cost_other
-            agreement_to_solve_conflict = np.random.choice([True, False])
+            if rng is None:
+                rng = np.random
+            agreement_to_solve_conflict = bool(rng.choice([True, False]))
         return agreement_to_solve_conflict
 
     @staticmethod
@@ -107,7 +111,9 @@ class NegotiationStrategy:
             atol=1e-3,
         ):
             # if the difference of adjusted costs is close to the threshold, we randomize the decision to avoid systematic bias
-            other_resolves_conflict = np.random.choice([True, False])
+            other_resolves_conflict = bool(
+                agent_self.environment.rng.choice([True, False])
+            )
         else:
             # if difference of augmented costs is zero or below threshold, this agent has to resolve the conflict
             other_resolves_conflict = False
