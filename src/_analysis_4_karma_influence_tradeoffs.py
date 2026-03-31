@@ -5,8 +5,8 @@ targets one grid size and one agent count. It sweeps only the karma influence
 parameter (delta is fixed to 1.0) for four controllers: respect, egoistic,
 altruistic, and trip-karma. Seeded runs are parallelized. Results are written
 to a timestamped folder under ``results/`` and aggregated into a single
-``summary.json`` stored both in that folder and in ``src/log_files/analysis_3/summary.json``
-for downstream plotting (Figure_3).
+``summary.json`` stored both in that folder and in ``src/log_files/analysis_4/summary.json``
+for downstream use.
 """
 
 from __future__ import annotations
@@ -14,16 +14,17 @@ from __future__ import annotations
 import copy
 import json
 import logging
-import multiprocessing
+import os
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from time import perf_counter
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, List, Tuple
 
-import numpy as np
 from tqdm import tqdm
 
+from analysis_helpers import compute_run_metrics, summarize
 from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
@@ -43,8 +44,8 @@ logger = logging.getLogger(__name__)
 
 
 # Global knobs (edit here for reproducibility)
-GRID_SIZE = 5  # base grid size (without +2 padding) - values: 5, 10, 15
-N_AGENTS = 10  # values: 10, 30, 80
+GRID_SIZE = 15  # base grid size (without +2 padding) - values: 5, 10, 15
+N_AGENTS = 80  # values: 10, 30, 80
 DELTA_THRESHOLD = 0
 INFLUENCES = [round(x * 0.1, 1) for x in range(0, 11)]
 SEEDS = list(range(41, 61))
@@ -94,64 +95,6 @@ CONTROLLERS = [
 ]
 
 
-# --- Local analysis helpers ---
-def gini(x: Iterable[float]) -> float:
-    arr = np.array(list(x), dtype=float)
-    if len(arr) == 0:
-        return 0.0
-    mad = np.abs(np.subtract.outer(arr, arr)).mean()
-    return 0.5 * mad / np.mean(arr)
-
-
-def summarize(x: Iterable[float]) -> Tuple[float, float, float, float, float]:
-    arr = np.array(list(x), dtype=float)
-    if len(arr) == 0:
-        return 0.0, 0.0, 0.0, 0.0, 0.0
-    return (
-        arr.mean(),
-        arr.std(ddof=0),
-        np.median(arr),
-        gini(arr),
-        np.percentile(arr, 75) - np.percentile(arr, 25),
-    )
-
-
-def compute_run_metrics(
-    completed_tasks_by_agent: Dict[int, List[Any]],
-    n_astar_calls: float,
-) -> Dict[str, float]:
-    """Compute only the metric needed for plotting: avg service time increase over all tasks."""
-
-    all_completed_tasks = [
-        task for task_list in completed_tasks_by_agent.values() for task in task_list
-    ]
-
-    task_service_times = [
-        task.completed_time - task.pickup_time
-        for task in all_completed_tasks
-        if task.completed_time is not None and task.pickup_time is not None
-    ]
-    task_min_times = [
-        task.minimum_task_time
-        for task in all_completed_tasks
-        if task.minimum_task_time != 0
-    ]
-
-    if len(task_service_times) != len(task_min_times):
-        raise ValueError("Completed task counts do not align; cannot summarize.")
-
-    service_increase_pct = [
-        (s_time - m_time) / m_time * 100
-        for s_time, m_time in zip(task_service_times, task_min_times)
-    ]
-
-    return {
-        "Avg Service Time Increase (%) (all agents)": float(
-            np.mean(service_increase_pct) if service_increase_pct else 0.0
-        ),
-    }
-
-
 def _sanitize_float(value: float) -> str:
     return str(value).replace(".", "p")
 
@@ -175,6 +118,7 @@ def _seed_result_path(out_dir: Path, result: Dict[str, Any]) -> Path:
 
 
 def run_single_simulation(simulation_settings: Dict[str, Any]) -> Dict[str, float]:
+    AStarPathPlanner.reset_counter()
     env = Environment(settings=simulation_settings)
     for _ in range(simulation_settings["n_agents"]):
         env.spawn_agent()
@@ -340,9 +284,9 @@ def main() -> None:
 
     project_root = Path(__file__).resolve().parent.parent
     results_root = project_root / "results"
-    logs_dir = project_root / "src" / "log_files" / "analysis_3"
+    logs_dir = project_root / "src" / "log_files" / "analysis_4"
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = results_root / f"figure3_karma_influence_{timestamp}"
+    out_dir = results_root / f"figure4_karma_influence_{timestamp}"
 
     base_settings = _build_settings(BASE_SIMULATION_SETTINGS, cfg)
     env_grid_size = cfg.grid_size + 2  # preserve existing +2 padding convention
@@ -358,7 +302,6 @@ def main() -> None:
         out_dir.name,
     )
 
-    pool_size = min(len(cfg.seeds), multiprocessing.cpu_count()) or 1
     jobs: List[Tuple[str, float, int, int, Dict[str, Any], int]] = []
     for controller in CONTROLLERS:
         for influence in cfg.influences:
@@ -374,17 +317,18 @@ def main() -> None:
                     )
                 )
 
+    max_workers = min(len(jobs), os.cpu_count() or 1)
     logger.info(
-        "Dispatching %d seed runs (pool=%d) across %d controllers and %d influences",
+        "Dispatching %d seed runs (workers=%d) across %d controllers and %d influences",
         len(jobs),
-        pool_size,
+        max_workers,
         len(CONTROLLERS),
         len(cfg.influences),
     )
 
-    with multiprocessing.Pool(processes=pool_size) as pool:
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
         for result in tqdm(
-            pool.imap_unordered(_run_seed_job, jobs),
+            executor.map(_run_seed_job, jobs),
             total=len(jobs),
             desc="Seed runs",
             leave=True,
