@@ -62,9 +62,13 @@ def style_boxplot(boxplot, colors, face_mode):
         whisker.set_color(color)
     for cap, color in zip(boxplot["caps"], [color for color in colors for _ in range(2)]):
         cap.set_color(color)
-    for median in boxplot["medians"]:
-        median.set_color("black")
+    for median, color in zip(boxplot["medians"], colors):
+        median.set_color(color)
         median.set_linewidth(1.5)
+    for flier, color in zip(boxplot["fliers"], colors):
+        flier.set_markeredgecolor(color)
+        # flier.set_markerfacecolor(color)
+        flier.set_alpha(0.7)
 
 
 def plot_paired_boxplots(ax, grid_label, grid_data, xlabel=False, show_xtick_labels=True):
@@ -101,7 +105,7 @@ def plot_paired_boxplots(ax, grid_label, grid_data, xlabel=False, show_xtick_lab
     #     ax.set_xlabel("Distribution", fontweight="bold")
     ax.margins(x=0.05)
 
-    ax.grid(True, alpha=0.2)
+    ax.grid(True, axis="y", alpha=0.2)
 
 data_5 = load_grid_data("5", "10")
 data_10 = load_grid_data("10", "30")

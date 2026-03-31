@@ -8,8 +8,8 @@ import pandas as pd
 
 
 folder = "log_files/analysis_3/"
-FIGURE_WIDTH = 6.0
-FIGURE_HEIGHT = 4.0
+FIGURE_WIDTH = 6.0*2
+FIGURE_HEIGHT = 3.0
 
 METRIC_NAME = "Avg Service Time Increase (%) (all agents)"
 SUMMARY_FILES = [
@@ -55,7 +55,7 @@ def plot_influences(summary_dfs: list[pd.DataFrame], metadatas: list[dict]) -> N
         len(summary_dfs),
         figsize=(FIGURE_WIDTH, FIGURE_HEIGHT),
         sharex=True,
-        sharey=True,
+        sharey=False,
     )
     if len(summary_dfs) == 1:
         axes = [axes]
@@ -94,6 +94,7 @@ def plot_influences(summary_dfs: list[pd.DataFrame], metadatas: list[dict]) -> N
             ax.set_ylabel("Service Time Increase [%]")
         else:
             ax.set_ylabel("")
+        ax.tick_params(axis="y", which="both", labelleft=True)
         ax.set_title(
             f"{grid}x{grid} Grid\n(Agents {agents})", fontsize=10, fontweight="bold"
         )
@@ -117,8 +118,8 @@ def plot_influences(summary_dfs: list[pd.DataFrame], metadatas: list[dict]) -> N
         framealpha=1.0,
     )
 
-    plt.tight_layout(rect=(0.0, 0.05, 1.0, 1.0))
-    fig.subplots_adjust(wspace=0.08)
+    plt.tight_layout()
+    fig.subplots_adjust(top=0.867, bottom=0.249, wspace=0.120)
     fig.savefig("Figure_3_v2.png", dpi=300)
     plt.show()
 

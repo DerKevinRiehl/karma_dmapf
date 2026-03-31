@@ -1,25 +1,26 @@
+import json
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import json
 
 folder = "../log_files/analysis_1/"
-FIGURE_WIDTH = 6.0*2
-FIGURE_HEIGHT = 5.0 
+FIGURE_WIDTH = 6.0 * 2
+FIGURE_HEIGHT = 5.0
 
-controller_labels = [
-    "Token Passing",
-    "Egoistic",
-    "Altruistic",
-    "Karma"
+controllers = [
+    ("DECENTRALIZED_RESPECT", "Token Passing", "dodgerblue"),
+    ("DECENTRALIZED_NEGOTIATE_EGOISTIC", "Egoistic", "olive"),
+    ("DECENTRALIZED_NEGOTIATE_ALTRUISTIC", "Altruistic", "green"),
+    ("DECENTRALIZED_NEGOTIATE_TRIP_KARMA", "Karma", "red"),
 ]
 
-controller_colors = [
-    "dodgerblue",
-    "olive",
-    "green",
-    "red",
-]
+grid_sizes = ["5", "10", "15"]
+grid_labels = {
+    "5": "5x5 Grid",
+    "10": "10x10 Grid",
+    "15": "15x15 Grid",
+}
 
 row_measures = [
     "Completed Tasks",
@@ -35,564 +36,91 @@ row_labels = [
     "Avg. Service Time [s]",
 ]
 
-factors = [
-    10/4,
-    10,
-    10
-]
-
-# measures = [
-#     'A* Calls',
-#     'Completed Tasks',
-#     'Total Task Time (incl. Reallocation) (all agents)',
-#     'Avg Task Time (incl. Reallocation) (all agents)',
-#     'Std Task Time (incl. Reallocation) (all agents)',
-#     'Total Service Time (all agents)',
-#     'Avg Service Time (all agents)',
-#     'Std Service Time (all agents)',
-#     'Avg Service Time Increase (%) (all agents)',
-#     'Avg Service Time (per agent mean)',
-#     'Avg Service Increase (%) (per agent mean)'
-# ]
+# Preserves the original scaling choices from the previous script.
+scale_factors = {
+    "5": [10 / 4, 10 / 4, 1, 1],
+    "10": [10, 10, 1, 1],
+    "15": [10, 10 / 4, 1, 1],
+}
 
 
 def load_data(grid_size, controller, measure, factor=1):
-    # grid_size = "5"
-    # controller = "DECENTRALIZED_RESPECT"
-    # measure = "Completed Tasks"
     with open(folder + f"summary_{controller}_{grid_size}.json", "r") as file:
         data_dict = json.load(file)
-    num_agents = list(data_dict[grid_size][controller]["raw_data"].keys())
-    df = []
-    for n_agent in num_agents:
-        mean = np.mean(data_dict[grid_size][controller]["raw_data"][n_agent][measure])
-        std = np.std(data_dict[grid_size][controller]["raw_data"][n_agent][measure])
-        df.append([n_agent, mean, std])
-    df = pd.DataFrame(df, columns=["n", "mean", "std"])
-    df["mean"] = df["mean"].rolling(window=3, center=True, min_periods=1).median()*factor
-    df["std"] = df["std"].rolling(window=3, center=True, min_periods=1).median()*factor
+
+    raw_data = data_dict[grid_size][controller]["raw_data"]
+    rows = []
+    for n_agent, values_by_measure in raw_data.items():
+        values = values_by_measure[measure]
+        rows.append([n_agent, np.mean(values), np.std(values)])
+
+    df = pd.DataFrame(rows, columns=["n", "mean", "std"])
+    df["n"] = pd.to_numeric(df["n"])
+    df = df.sort_values("n").reset_index(drop=True)
+    df["mean"] = df["mean"].rolling(window=3, center=True, min_periods=1).median() * factor
+    df["std"] = df["std"].rolling(window=3, center=True, min_periods=1).median() * factor
     return df
 
 
-df_respect = load_data(
-    grid_size="5", 
-    controller="DECENTRALIZED_RESPECT", 
-    measure=row_measures[0], 
-    factor=factors[0]
-)
-df_neg_ego = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[0], 
-    factor=factors[0]
-)
-df_neg_alt = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[0], 
-    factor=factors[0]
-)
-df_neg_kar = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
-    measure=row_measures[0], 
-    factor=factors[0]
-)
-controller_dfs_5_rw1 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
-df_respect = load_data(
-    grid_size="10", 
-    controller="DECENTRALIZED_RESPECT", 
-    measure=row_measures[0],  
-    factor=factors[1]
-)
-df_neg_ego = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[0],  
-    factor=factors[1]
-)
-df_neg_alt = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[0],  
-    factor=factors[1]
-)
-df_neg_kar = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
-    measure=row_measures[0],  
-    factor=factors[1]
-)
-controller_dfs_10_rw1 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
-df_respect = load_data(
-    grid_size="15", 
-    controller="DECENTRALIZED_RESPECT", 
-    measure=row_measures[0],  
-    factor=factors[1]
-)
-df_neg_ego = load_data(
-    grid_size="15",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[0],  
-    factor=factors[1]
-)
-df_neg_alt = load_data(
-    grid_size="15",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[0],  
-    factor=factors[1]
-)
-df_neg_kar = load_data(
-    grid_size="15",
-    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
-    measure=row_measures[0],  
-    factor=factors[1]
-)
-controller_dfs_15_rw1 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
+def build_plot_data():
+    plot_data = {}
+    for grid_size in grid_sizes:
+        plot_data[grid_size] = []
+        for measure_idx, measure in enumerate(row_measures):
+            factor = scale_factors[grid_size][measure_idx]
+            controller_dfs = [
+                load_data(grid_size, controller_name, measure, factor)
+                for controller_name, _, _ in controllers
+            ]
+            plot_data[grid_size].append(controller_dfs)
+    return plot_data
 
-df_respect = load_data(
-    grid_size="5", 
-    controller="DECENTRALIZED_RESPECT", 
-    measure=row_measures[1],   
-    factor=factors[0]
-)
-df_neg_ego = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[1],   
-    factor=factors[0]
-)
-df_neg_alt = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[1],   
-    factor=factors[0]
-)
-df_neg_kar = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
-    measure=row_measures[1],   
-    factor=factors[0]
-)
-controller_dfs_5_rw2 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
-df_respect = load_data(
-    grid_size="10", 
-    controller="DECENTRALIZED_RESPECT", 
-    measure=row_measures[1],    
-    factor=factors[1]
-)
-df_neg_ego = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[1],    
-    factor=factors[1]
-)
-df_neg_alt = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[1],    
-    factor=factors[1]
-)
-df_neg_kar = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
-    measure=row_measures[1],    
-    factor=factors[1]
-)
-controller_dfs_10_rw2 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
-df_respect = load_data(
-    grid_size="15", 
-    controller="DECENTRALIZED_RESPECT", 
-    measure=row_measures[1],   
-    factor=factors[0]
-)
-df_neg_ego = load_data(
-    grid_size="15",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[1],   
-    factor=factors[0]
-)
-df_neg_alt = load_data(
-    grid_size="15",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[1],   
-    factor=factors[0]
-)
-df_neg_kar = load_data(
-    grid_size="15",
-    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
-    measure=row_measures[1],   
-    factor=factors[0]
-)
-controller_dfs_15_rw2 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
 
-df_respect = load_data(
-    grid_size="5", 
-    controller="DECENTRALIZED_RESPECT", 
-    measure=row_measures[2],     
-)
-df_neg_ego = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[2],     
-)
-df_neg_alt = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[2],     
-)
-df_neg_kar = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
-    measure=row_measures[2],     
-)
-controller_dfs_5_rw3 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
-df_respect = load_data(
-    grid_size="10", 
-    controller="DECENTRALIZED_RESPECT", 
-    measure=row_measures[2],      
-)
-df_neg_ego = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[2],     
-)
-df_neg_alt = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[2],      
-)
-df_neg_kar = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
-    measure=row_measures[2],      
-)
-controller_dfs_10_rw3 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
-df_respect = load_data(
-    grid_size="15", 
-    controller="DECENTRALIZED_RESPECT", 
-    measure=row_measures[2],     
-)
-df_neg_ego = load_data(
-    grid_size="15",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[2],     
-)
-df_neg_alt = load_data(
-    grid_size="15",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[2],     
-)
-df_neg_kar = load_data(
-    grid_size="15",
-    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
-    measure=row_measures[2],     
-)
-controller_dfs_15_rw3 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
+def plot_subplot(ax, controller_dfs, title=None, ylabel=None, show_legend=False):
+    ax.grid(True, alpha=0.2)
+    if title is not None:
+        ax.set_title(title, fontweight="bold")
+    if ylabel is not None:
+        ax.set_ylabel(ylabel, fontweight="bold")
 
-df_respect = load_data(
-    grid_size="5", 
-    controller="DECENTRALIZED_RESPECT", 
-    measure=row_measures[3],     
-)
-df_neg_ego = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[3],      
-)
-df_neg_alt = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[3],      
-)
-df_neg_kar = load_data(
-    grid_size="5",
-    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
-    measure=row_measures[3],     
-)
-controller_dfs_5_rw4 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
-df_respect = load_data(
-    grid_size="10", 
-    controller="DECENTRALIZED_RESPECT", 
-    measure=row_measures[3],     
-)
-df_neg_ego = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[3], 
-)
-df_neg_alt = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[3],
-)
-df_neg_kar = load_data(
-    grid_size="10",
-    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
-    measure=row_measures[3], 
-)
-controller_dfs_10_rw4 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
-df_respect = load_data(
-    grid_size="15", 
-    controller="DECENTRALIZED_RESPECT", 
-    measure=row_measures[3],     
-)
-df_neg_ego = load_data(
-    grid_size="15",
-    controller="DECENTRALIZED_NEGOTIATE_EGOISTIC",
-    measure=row_measures[3],      
-)
-df_neg_alt = load_data(
-    grid_size="15",
-    controller="DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
-    measure=row_measures[3],      
-)
-df_neg_kar = load_data(
-    grid_size="15",
-    controller="DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
-    measure=row_measures[3],     
-)
-controller_dfs_15_rw4 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
+    ax.set_xlabel("Density [#Agents]")
+    ax.set_xlim(controller_dfs[0]["n"].min(), controller_dfs[0]["n"].max())
+    ax.margins(x=0)
 
-plt.figure(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT))
+    for controller_df, (_, label, color) in zip(controller_dfs, controllers):
+        ax.plot(
+            controller_df["n"],
+            controller_df["mean"],
+            label=label,
+            color=color,
+        )
+        ax.fill_between(
+            controller_df["n"],
+            controller_df["mean"] - controller_df["std"],
+            controller_df["mean"] + controller_df["std"],
+            color=color,
+            alpha=0.1,
+        )
 
-plt.subplot(3, 4, 1 + 4 * 0)
-plt.grid(True, alpha=0.2)
-plt.title(row_labels[0], fontweight="bold")
-plt.ylabel("5x5 Grid", fontweight="bold")
-plt.xlim(1, 10 - 1)
-plt.xlabel("Density [#Agents]")
-for idx, controller_df in enumerate(controller_dfs_5_rw1):
-    plt.plot(
-        controller_df["n"],
-        controller_df["mean"],
-        label=controller_labels[idx],
-        color=controller_colors[idx],
-    )
-    plt.fill_between(
-        controller_df["n"],
-        controller_df["mean"] - controller_df["std"],
-        controller_df["mean"] + controller_df["std"],
-        color=controller_colors[idx],
-        alpha=0.1,
-    )
-plt.legend(fontsize="small")
-plt.margins(x=0)
+    if show_legend:
+        ax.legend(fontsize="small")
 
-plt.subplot(3, 4, 2 + 4 * 0)
-plt.grid(True, alpha=0.2)
-plt.title(row_labels[1], fontweight="bold")
-plt.xlim(1, 10 - 1)
-plt.xlabel("Density [#Agents]")
-for idx, controller_df in enumerate(controller_dfs_5_rw2):
-    plt.plot(
-        controller_df["n"],
-        controller_df["mean"],
-        label=controller_labels[idx],
-        color=controller_colors[idx],
-    )
-    plt.fill_between(
-        controller_df["n"],
-        controller_df["mean"] - controller_df["std"],
-        controller_df["mean"] + controller_df["std"],
-        color=controller_colors[idx],
-        alpha=0.1,
-    )
 
-plt.subplot(3, 4, 3 + 4 * 0)
-plt.grid(True, alpha=0.2)
-plt.title(row_labels[2], fontweight="bold")
-plt.xlim(1, 10 - 1)
-plt.xlabel("Density [#Agents]")
-for idx, controller_df in enumerate(controller_dfs_5_rw3):
-    plt.plot(
-        controller_df["n"],
-        controller_df["mean"],
-        label=controller_labels[idx],
-        color=controller_colors[idx],
-    )
-    plt.fill_between(
-        controller_df["n"],
-        controller_df["mean"] - controller_df["std"],
-        controller_df["mean"] + controller_df["std"],
-        color=controller_colors[idx],
-        alpha=0.1,
-    )
-plt.margins(x=0)
+plot_data = build_plot_data()
 
-plt.subplot(3, 4, 4 + 4 * 0)
-plt.grid(True, alpha=0.2)
-plt.title(row_labels[3], fontweight="bold")
-plt.xlim(1, 10 - 1)
-plt.xlabel("Density [#Agents]")
-for idx, controller_df in enumerate(controller_dfs_5_rw4):
-    plt.plot(
-        controller_df["n"],
-        controller_df["mean"],
-        label=controller_labels[idx],
-        color=controller_colors[idx],
-    )
-    plt.fill_between(
-        controller_df["n"],
-        controller_df["mean"] - controller_df["std"],
-        controller_df["mean"] + controller_df["std"],
-        color=controller_colors[idx],
-        alpha=0.1,
-    )
+fig, axes = plt.subplots(3, 4, figsize=(FIGURE_WIDTH, FIGURE_HEIGHT))
 
-plt.subplot(3, 4, 1 + 4 * 1)
-plt.grid(True, alpha=0.2)
-plt.ylabel("10x10 Grid", fontweight="bold")
-# plt.xlim(1, 30 - 1)
-plt.xlabel("Density [#Agents]")
-for idx, controller_df in enumerate(controller_dfs_10_rw1):
-    plt.plot(
-        controller_df["n"],
-        controller_df["mean"],
-        label=controller_labels[idx],
-        color=controller_colors[idx],
-    )
-    plt.fill_between(
-        controller_df["n"],
-        controller_df["mean"] - controller_df["std"],
-        controller_df["mean"] + controller_df["std"],
-        color=controller_colors[idx],
-        alpha=0.1,
-    )
+for row_idx, grid_size in enumerate(grid_sizes):
+    for col_idx, controller_dfs in enumerate(plot_data[grid_size]):
+        ax = axes[row_idx, col_idx]
+        plot_subplot(
+            ax,
+            controller_dfs,
+            title=row_labels[col_idx] if row_idx == 0 else None,
+            ylabel=grid_labels[grid_size] if col_idx == 0 else None,
+            show_legend=(row_idx == 0 and col_idx == 0),
+        )
 
-plt.subplot(3, 4, 2 + 4 * 1)
-plt.grid(True, alpha=0.2)
-# plt.xlim(1, 30 - 1)
-plt.xlabel("Density [#Agents]")
-for idx, controller_df in enumerate(controller_dfs_10_rw2):
-    plt.plot(
-        controller_df["n"],
-        controller_df["mean"],
-        label=controller_labels[idx],
-        color=controller_colors[idx],
-    )
-    plt.fill_between(
-        controller_df["n"],
-        controller_df["mean"] - controller_df["std"],
-        controller_df["mean"] + controller_df["std"],
-        color=controller_colors[idx],
-        alpha=0.1,
-    )
-
-plt.subplot(3, 4, 3 + 4 * 1)
-plt.grid(True, alpha=0.2)
-# plt.xlim(1, 30 - 1)
-plt.xlabel("Density [#Agents]")
-for idx, controller_df in enumerate(controller_dfs_10_rw3):
-    plt.plot(
-        controller_df["n"],
-        controller_df["mean"],
-        label=controller_labels[idx],
-        color=controller_colors[idx],
-    )
-    plt.fill_between(
-        controller_df["n"],
-        controller_df["mean"] - controller_df["std"],
-        controller_df["mean"] + controller_df["std"],
-        color=controller_colors[idx],
-        alpha=0.1,
-    )
-
-plt.subplot(3, 4, 4 + 4 * 1)
-plt.grid(True, alpha=0.2)
-# plt.xlim(1, 30 - 1)
-plt.xlabel("Density [#Agents]")
-for idx, controller_df in enumerate(controller_dfs_10_rw4):
-    plt.plot(
-        controller_df["n"],
-        controller_df["mean"],
-        label=controller_labels[idx],
-        color=controller_colors[idx],
-    )
-    plt.fill_between(
-        controller_df["n"],
-        controller_df["mean"] - controller_df["std"],
-        controller_df["mean"] + controller_df["std"],
-        color=controller_colors[idx],
-        alpha=0.1,
-    )
-
-plt.subplot(3, 4, 1 + 4 * 2)
-plt.grid(True, alpha=0.2)
-plt.ylabel("15x15 Grid", fontweight="bold")
-plt.xlabel("Density [#Agents]")
-for idx, controller_df in enumerate(controller_dfs_15_rw1):
-    plt.plot(
-        controller_df["n"],
-        controller_df["mean"],
-        label=controller_labels[idx],
-        color=controller_colors[idx],
-    )
-    plt.fill_between(
-        controller_df["n"],
-        controller_df["mean"] - controller_df["std"],
-        controller_df["mean"] + controller_df["std"],
-        color=controller_colors[idx],
-        alpha=0.1,
-    )
-    
-plt.subplot(3, 4, 2 + 4 * 2)
-plt.grid(True, alpha=0.2)
-plt.xlabel("Density [#Agents]")
-for idx, controller_df in enumerate(controller_dfs_15_rw2):
-    plt.plot(
-        controller_df["n"],
-        controller_df["mean"],
-        label=controller_labels[idx],
-        color=controller_colors[idx],
-    )
-    plt.fill_between(
-        controller_df["n"],
-        controller_df["mean"] - controller_df["std"],
-        controller_df["mean"] + controller_df["std"],
-        color=controller_colors[idx],
-        alpha=0.1,
-    )
-    
-plt.subplot(3, 4, 3 + 4 * 2)
-plt.grid(True, alpha=0.2)
-plt.xlabel("Density [#Agents]")
-for idx, controller_df in enumerate(controller_dfs_15_rw3):
-    plt.plot(
-        controller_df["n"],
-        controller_df["mean"],
-        label=controller_labels[idx],
-        color=controller_colors[idx],
-    )
-    plt.fill_between(
-        controller_df["n"],
-        controller_df["mean"] - controller_df["std"],
-        controller_df["mean"] + controller_df["std"],
-        color=controller_colors[idx],
-        alpha=0.1,
-    )
-    
-plt.subplot(3, 4, 4 + 4 * 2)
-plt.grid(True, alpha=0.2)
-plt.xlabel("Density [#Agents]")
-for idx, controller_df in enumerate(controller_dfs_15_rw4):
-    plt.plot(
-        controller_df["n"],
-        controller_df["mean"],
-        label=controller_labels[idx],
-        color=controller_colors[idx],
-    )
-    plt.fill_between(
-        controller_df["n"],
-        controller_df["mean"] - controller_df["std"],
-        controller_df["mean"] + controller_df["std"],
-        color=controller_colors[idx],
-        alpha=0.1,
-    )
-    
-# plt.subplots_adjust(top=0.960, bottom=0.080, left=0.060, right=0.990, hspace=0.330, wspace=0.230)
 plt.subplots_adjust(top=0.950, bottom=0.090, left=0.060, right=0.990, hspace=0.400, wspace=0.230)
 plt.savefig("Figure_1.png", dpi=300)
 plt.show()
-
-# plt.savefig("Figure_1.pdf")
