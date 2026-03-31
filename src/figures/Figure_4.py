@@ -14,7 +14,7 @@ FOLDER = "log_files/analysis_4/"
 SUMMARY_FILES = [
     "summary_grid5_agents10_T100.json",
     "summary_grid10_agents30_T100.json",
-    "summary_grid10_agents30_T100.json",  # TODO: replace with results from 15x15 grid
+    "summary_grid15_agents80_T100.json",
 ]
 
 # Metrics to explore as trade-offs against the karma influence parameter.
@@ -33,7 +33,6 @@ CONTROLLER_LABELS = {
     "DECENTRALIZED_NEGOTIATE_TRIP_KARMA": "Karma",
 }
 
-# Match Figure_3 palette
 CONTROLLER_COLORS = {
     "DECENTRALIZED_RESPECT": "dodgerblue",
     "DECENTRALIZED_NEGOTIATE_EGOISTIC": "olive",
