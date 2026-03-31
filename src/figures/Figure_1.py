@@ -103,7 +103,8 @@ def plot_subplot(ax, controller_dfs, title=None, ylabel=None, show_legend=False)
         )
 
     if show_legend:
-        ax.legend(fontsize="small")
+        ax.legend(fontsize="x-small", loc="upper left",
+                  frameon=True, framealpha=0)   # transparent box)
 
 
 plot_data = build_plot_data()
