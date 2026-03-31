@@ -43,8 +43,8 @@ logger = logging.getLogger(__name__)
 
 
 # Global knobs (edit here for reproducibility)
-GRID_SIZE = 10  # base grid size (without +2 padding)
-N_AGENTS = 30
+GRID_SIZE = 5  # base grid size (without +2 padding) - values: 5, 10, 15
+N_AGENTS = 10  # values: 10, 30, 80
 DELTA_THRESHOLD = 0
 INFLUENCES = [round(x * 0.1, 1) for x in range(0, 11)]
 SEEDS = list(range(41, 61))
