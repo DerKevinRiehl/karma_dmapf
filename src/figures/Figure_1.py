@@ -5,7 +5,7 @@ import json
 
 folder = "../log_files/analysis_1/"
 FIGURE_WIDTH = 6.0*2
-FIGURE_HEIGHT = 8.0 
+FIGURE_HEIGHT = 5.0 
 
 controller_labels = [
     "Token Passing",
@@ -357,6 +357,7 @@ controller_dfs_15_rw4 = [df_respect, df_neg_ego, df_neg_alt, df_neg_kar]
 plt.figure(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT))
 
 plt.subplot(3, 4, 1 + 4 * 0)
+plt.grid(True, alpha=0.2)
 plt.title(row_labels[0], fontweight="bold")
 plt.ylabel("5x5 Grid", fontweight="bold")
 plt.xlim(1, 10 - 1)
@@ -379,6 +380,7 @@ plt.legend(fontsize="small")
 plt.margins(x=0)
 
 plt.subplot(3, 4, 2 + 4 * 0)
+plt.grid(True, alpha=0.2)
 plt.title(row_labels[1], fontweight="bold")
 plt.xlim(1, 10 - 1)
 plt.xlabel("Density [#Agents]")
@@ -398,6 +400,7 @@ for idx, controller_df in enumerate(controller_dfs_5_rw2):
     )
 
 plt.subplot(3, 4, 3 + 4 * 0)
+plt.grid(True, alpha=0.2)
 plt.title(row_labels[2], fontweight="bold")
 plt.xlim(1, 10 - 1)
 plt.xlabel("Density [#Agents]")
@@ -418,6 +421,7 @@ for idx, controller_df in enumerate(controller_dfs_5_rw3):
 plt.margins(x=0)
 
 plt.subplot(3, 4, 4 + 4 * 0)
+plt.grid(True, alpha=0.2)
 plt.title(row_labels[3], fontweight="bold")
 plt.xlim(1, 10 - 1)
 plt.xlabel("Density [#Agents]")
@@ -437,6 +441,7 @@ for idx, controller_df in enumerate(controller_dfs_5_rw4):
     )
 
 plt.subplot(3, 4, 1 + 4 * 1)
+plt.grid(True, alpha=0.2)
 plt.ylabel("10x10 Grid", fontweight="bold")
 # plt.xlim(1, 30 - 1)
 plt.xlabel("Density [#Agents]")
@@ -456,6 +461,7 @@ for idx, controller_df in enumerate(controller_dfs_10_rw1):
     )
 
 plt.subplot(3, 4, 2 + 4 * 1)
+plt.grid(True, alpha=0.2)
 # plt.xlim(1, 30 - 1)
 plt.xlabel("Density [#Agents]")
 for idx, controller_df in enumerate(controller_dfs_10_rw2):
@@ -474,6 +480,7 @@ for idx, controller_df in enumerate(controller_dfs_10_rw2):
     )
 
 plt.subplot(3, 4, 3 + 4 * 1)
+plt.grid(True, alpha=0.2)
 # plt.xlim(1, 30 - 1)
 plt.xlabel("Density [#Agents]")
 for idx, controller_df in enumerate(controller_dfs_10_rw3):
@@ -492,6 +499,7 @@ for idx, controller_df in enumerate(controller_dfs_10_rw3):
     )
 
 plt.subplot(3, 4, 4 + 4 * 1)
+plt.grid(True, alpha=0.2)
 # plt.xlim(1, 30 - 1)
 plt.xlabel("Density [#Agents]")
 for idx, controller_df in enumerate(controller_dfs_10_rw4):
@@ -510,6 +518,7 @@ for idx, controller_df in enumerate(controller_dfs_10_rw4):
     )
 
 plt.subplot(3, 4, 1 + 4 * 2)
+plt.grid(True, alpha=0.2)
 plt.ylabel("15x15 Grid", fontweight="bold")
 plt.xlabel("Density [#Agents]")
 for idx, controller_df in enumerate(controller_dfs_15_rw1):
@@ -528,6 +537,7 @@ for idx, controller_df in enumerate(controller_dfs_15_rw1):
     )
     
 plt.subplot(3, 4, 2 + 4 * 2)
+plt.grid(True, alpha=0.2)
 plt.xlabel("Density [#Agents]")
 for idx, controller_df in enumerate(controller_dfs_15_rw2):
     plt.plot(
@@ -545,6 +555,7 @@ for idx, controller_df in enumerate(controller_dfs_15_rw2):
     )
     
 plt.subplot(3, 4, 3 + 4 * 2)
+plt.grid(True, alpha=0.2)
 plt.xlabel("Density [#Agents]")
 for idx, controller_df in enumerate(controller_dfs_15_rw3):
     plt.plot(
@@ -562,6 +573,7 @@ for idx, controller_df in enumerate(controller_dfs_15_rw3):
     )
     
 plt.subplot(3, 4, 4 + 4 * 2)
+plt.grid(True, alpha=0.2)
 plt.xlabel("Density [#Agents]")
 for idx, controller_df in enumerate(controller_dfs_15_rw4):
     plt.plot(
@@ -578,7 +590,8 @@ for idx, controller_df in enumerate(controller_dfs_15_rw4):
         alpha=0.1,
     )
     
-plt.subplots_adjust(top=0.960, bottom=0.060, left=0.060, right=0.990, hspace=0.250, wspace=0.230)
+# plt.subplots_adjust(top=0.960, bottom=0.080, left=0.060, right=0.990, hspace=0.330, wspace=0.230)
+plt.subplots_adjust(top=0.950, bottom=0.090, left=0.060, right=0.990, hspace=0.400, wspace=0.230)
 plt.savefig("Figure_1.png", dpi=300)
 plt.show()
 

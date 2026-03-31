@@ -101,6 +101,7 @@ def plot_paired_boxplots(ax, grid_label, grid_data, xlabel=False, show_xtick_lab
     #     ax.set_xlabel("Distribution", fontweight="bold")
     ax.margins(x=0.05)
 
+    ax.grid(True, alpha=0.2)
 
 data_5 = load_grid_data("5", "10")
 data_10 = load_grid_data("10", "30")
