@@ -13,7 +13,7 @@ METRIC_NAME = "Avg Service Time Increase (%) (all agents)"
 SUMMARY_FILES = [
     "summary_grid5_agents10_T100.json",
     "summary_grid10_agents30_T100.json",
-    "summary_grid10_agents30_T100.json",
+    "summary_grid15_agents80_T100.json",
 ]
 
 CONTROLLER_LABELS = {
