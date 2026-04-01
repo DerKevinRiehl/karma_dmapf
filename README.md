@@ -36,7 +36,7 @@ This is the online repository of "Karma Mechanisms for Decentralised, Cooperativ
 </tr>
 <tr>
 <td><b><center>Negotiation (Egoistic)</center></b></td>
-<td><b><center>Negotiation (Altruistic)</center></b></td>
+<td><b><center>Negotiation (Karma)</center></b></td>
 </tr>
 </table>
 
@@ -102,7 +102,6 @@ simulation_settings = {
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
-    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
     "time_horizon_visualization": 10,
     "time_simulation_duration": 100,
