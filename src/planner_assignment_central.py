@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Tuple, TYPE_CHECKING, Any
+from typing import List, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from agent import Agent
@@ -7,8 +7,8 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 import numpy as np
-from geometry import Geometry
 from scipy.optimize import linear_sum_assignment
+from geometry import Geometry
 from constants import AGENT_STATUS_CARRY
 
 
