@@ -3,7 +3,7 @@ from matplotlib.patches import Patch
 
 folder = "../log_files/analysis_2/"
 FIGURE_WIDTH = 6.0
-FIGURE_HEIGHT = 8.0 
+FIGURE_HEIGHT = 8.0
 
 controller_file_names = [
     "DECENTRALIZED_RESPECT",
@@ -25,6 +25,7 @@ controller_colors = [
     "green",
     "red",
 ]
+
 
 def load_time_values(ftype, controller, grid_size, n_agents):
     file_path = f"{folder}{ftype}_{controller}_{grid_size}_{n_agents}.txt"
@@ -58,9 +59,13 @@ def style_boxplot(boxplot, colors, face_mode):
             patch.set_alpha(1.0)
             patch.set_hatch("///")
 
-    for whisker, color in zip(boxplot["whiskers"], [color for color in colors for _ in range(2)]):
+    for whisker, color in zip(
+        boxplot["whiskers"], [color for color in colors for _ in range(2)]
+    ):
         whisker.set_color(color)
-    for cap, color in zip(boxplot["caps"], [color for color in colors for _ in range(2)]):
+    for cap, color in zip(
+        boxplot["caps"], [color for color in colors for _ in range(2)]
+    ):
         cap.set_color(color)
     for median, color in zip(boxplot["medians"], colors):
         median.set_color(color)
@@ -71,7 +76,9 @@ def style_boxplot(boxplot, colors, face_mode):
         flier.set_alpha(0.7)
 
 
-def plot_paired_boxplots(ax, grid_label, grid_data, xlabel=False, show_xtick_labels=True):
+def plot_paired_boxplots(
+    ax, grid_label, grid_data, xlabel=False, show_xtick_labels=True
+):
     distribution_positions = [1, 2]
     offsets = [-0.27, -0.09, 0.09, 0.27]
     task_positions = [distribution_positions[0] + offset for offset in offsets]
@@ -107,6 +114,7 @@ def plot_paired_boxplots(ax, grid_label, grid_data, xlabel=False, show_xtick_lab
 
     ax.grid(True, axis="y", alpha=0.2)
 
+
 data_5 = load_grid_data("5", "10")
 data_10 = load_grid_data("10", "30")
 data_15 = load_grid_data("15", "80")
@@ -126,7 +134,9 @@ plot_paired_boxplots(
     data_10,
     show_xtick_labels=False,
 )
-plot_paired_boxplots(plt.subplot(3, 1, 3), "15x15 Grid\n(80 agents)", data_15, xlabel=True)
+plot_paired_boxplots(
+    plt.subplot(3, 1, 3), "15x15 Grid\n(80 agents)", data_15, xlabel=True
+)
 
 legend_handles = [
     Patch(facecolor=color, edgecolor=color, alpha=0.45, label=label)

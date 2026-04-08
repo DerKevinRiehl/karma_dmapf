@@ -8,7 +8,7 @@ import pandas as pd
 
 
 folder = "log_files/analysis_3/"
-FIGURE_WIDTH = 6.0*2
+FIGURE_WIDTH = 6.0 * 2
 FIGURE_HEIGHT = 3.0
 
 METRIC_NAME = "Avg Service Time Increase (%) (all agents)"

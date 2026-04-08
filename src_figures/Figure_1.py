@@ -57,8 +57,12 @@ def load_data(grid_size, controller, measure, factor=1):
     df = pd.DataFrame(rows, columns=["n", "mean", "std"])
     df["n"] = pd.to_numeric(df["n"])
     df = df.sort_values("n").reset_index(drop=True)
-    df["mean"] = df["mean"].rolling(window=3, center=True, min_periods=1).median() * factor
-    df["std"] = df["std"].rolling(window=3, center=True, min_periods=1).median() * factor
+    df["mean"] = (
+        df["mean"].rolling(window=3, center=True, min_periods=1).median() * factor
+    )
+    df["std"] = (
+        df["std"].rolling(window=3, center=True, min_periods=1).median() * factor
+    )
     return df
 
 
@@ -103,8 +107,9 @@ def plot_subplot(ax, controller_dfs, title=None, ylabel=None, show_legend=False)
         )
 
     if show_legend:
-        ax.legend(fontsize="x-small", loc="upper left",
-                  frameon=True, framealpha=0)   # transparent box)
+        ax.legend(
+            fontsize="x-small", loc="upper left", frameon=True, framealpha=0
+        )  # transparent box)
 
 
 plot_data = build_plot_data()
@@ -122,6 +127,8 @@ for row_idx, grid_size in enumerate(grid_sizes):
             show_legend=(row_idx == 0 and col_idx == 0),
         )
 
-plt.subplots_adjust(top=0.950, bottom=0.090, left=0.060, right=0.990, hspace=0.400, wspace=0.230)
+plt.subplots_adjust(
+    top=0.950, bottom=0.090, left=0.060, right=0.990, hspace=0.400, wspace=0.230
+)
 plt.savefig("Figure_1.png", dpi=300)
 plt.show()
