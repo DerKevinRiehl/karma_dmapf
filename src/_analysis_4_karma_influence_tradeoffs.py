@@ -34,7 +34,6 @@ from constants import (
 from environment import Environment
 from planner_path_astar import AStarPathPlanner
 
-
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] %(levelname)s %(message)s",

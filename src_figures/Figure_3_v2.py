@@ -6,7 +6,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 
-
 folder = "log_files/analysis_3/"
 FIGURE_WIDTH = 6.0 * 2
 FIGURE_HEIGHT = 3.0
