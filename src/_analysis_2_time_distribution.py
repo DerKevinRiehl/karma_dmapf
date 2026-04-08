@@ -29,7 +29,7 @@ from constants import (
 ###### PARAMETERS #############################################################
 ###############################################################################
 
-random_seeds = [n for n in range(41,51)]
+random_seeds = [n for n in range(41, 51)]
 
 os.makedirs("results", exist_ok=True)
 
@@ -122,7 +122,9 @@ def run_single_seed(seed):
 
         environment.time += 1
 
-        previous_positions = {a.id: list(a.current_position) for a in environment.agents}
+        previous_positions = {
+            a.id: list(a.current_position) for a in environment.agents
+        }
         environment.handle_agents()
 
         # Uncomment for conflict debugging if needed.
@@ -182,4 +184,3 @@ with open(service_times_path, "w+") as f:
 
 print(f"\nStored {len(all_task_times)} task times in {task_times_path}")
 print(f"Stored {len(all_service_times)} service times in {service_times_path}")
-
