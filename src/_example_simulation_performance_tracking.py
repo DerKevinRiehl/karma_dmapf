@@ -15,7 +15,7 @@ from visualization import plot_environment_and_reservation, make_gif
 
 from constants import (
     MAPF_CONTROLLER_CENTRALIZED,
-    MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+    MAPF_CONTROLLER_DECENTRALIZED_TOKEN_PASSING,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
@@ -30,7 +30,7 @@ simulation_settings = {
     "grid_size": 14,
     "n_agents": 10,
     # "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
-    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_TOKEN_PASSING,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_KARMA,
@@ -164,7 +164,7 @@ print("=====================================================")
 
 """
 =====================================================
-Experiment Results for algorithm DECENTRALIZED_RESPECT over 10 experiments
+Experiment Results for algorithm DECENTRALIZED_TOKEN_PASSING over 10 experiments
 =====================================================
 A* calls:        mean = 77801.400 	 std = 3732.673
 Completed tasks: mean = 496.400 	 std = 6.312

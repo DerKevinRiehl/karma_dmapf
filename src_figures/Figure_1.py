@@ -3,13 +3,14 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
-folder = "../log_files/analysis_1/"
+folder = Path(__file__).resolve().parent.parent / "log_files" / "analysis_1"
 FIGURE_WIDTH = 6.0 * 2
 FIGURE_HEIGHT = 5.0
 
 controllers = [
-    ("DECENTRALIZED_RESPECT", "Token Passing", "dodgerblue"),
+    ("DECENTRALIZED_TOKEN_PASSING", "Token Passing", "dodgerblue"),
     ("DECENTRALIZED_NEGOTIATE_EGOISTIC", "Egoistic", "olive"),
     ("DECENTRALIZED_NEGOTIATE_ALTRUISTIC", "Altruistic", "green"),
     ("DECENTRALIZED_NEGOTIATE_TRIP_KARMA", "Karma", "red"),
@@ -45,7 +46,8 @@ scale_factors = {
 
 
 def load_data(grid_size, controller, measure, factor=1):
-    with open(folder + f"summary_{controller}_{grid_size}.json", "r") as file:
+    file_path = folder / f"summary_{controller}_{grid_size}.json"
+    with open(file_path, "r") as file:
         data_dict = json.load(file)
 
     raw_data = data_dict[grid_size][controller]["raw_data"]
