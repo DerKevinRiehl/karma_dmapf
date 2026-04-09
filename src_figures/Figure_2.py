@@ -1,6 +1,10 @@
+import argparse
+import os
+from pathlib import Path
+
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
-from pathlib import Path
 
 folder = Path(__file__).resolve().parent.parent / "log_files" / "analysis_2"
 FIGURE_WIDTH = 6.0
@@ -116,41 +120,67 @@ def plot_paired_boxplots(
     ax.grid(True, axis="y", alpha=0.2)
 
 
-data_5 = load_grid_data("5", "10")
-data_10 = load_grid_data("10", "30")
-data_15 = load_grid_data("15", "80")
+def main(
+    output_dir: str = str(Path(__file__).resolve().parent), show: bool = True
+) -> None:
+
+    if not show or os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+        matplotlib.use("Agg")
+
+    data_5 = load_grid_data("5", "10")
+    data_10 = load_grid_data("10", "30")
+    data_15 = load_grid_data("15", "80")
+
+    fig = plt.figure(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT))
+
+    plot_paired_boxplots(
+        plt.subplot(3, 1, 1),
+        "5x5 Grid\n(10 agents)",
+        data_5,
+        show_xtick_labels=False,
+    )
+    plot_paired_boxplots(
+        plt.subplot(3, 1, 2),
+        "10x10 Grid\n(30 agents)",
+        data_10,
+        show_xtick_labels=False,
+    )
+    plot_paired_boxplots(
+        plt.subplot(3, 1, 3), "15x15 Grid\n(80 agents)", data_15, xlabel=True
+    )
+
+    legend_handles = [
+        Patch(facecolor=color, edgecolor=color, alpha=0.45, label=label)
+        for color, label in zip(controller_colors, controller_labels)
+    ]
+    fig.legend(
+        handles=legend_handles,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0.01),
+        ncol=4,
+        fontsize="small",
+    )
+
+    plt.tight_layout(rect=(0.0, 0.05, 1.0, 1.0))
+
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "Figure_2.png"
+    plt.savefig(str(out_path), dpi=300)
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
 
 
-fig = plt.figure(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT))
-
-plot_paired_boxplots(
-    plt.subplot(3, 1, 1),
-    "5x5 Grid\n(10 agents)",
-    data_5,
-    show_xtick_labels=False,
-)
-plot_paired_boxplots(
-    plt.subplot(3, 1, 2),
-    "10x10 Grid\n(30 agents)",
-    data_10,
-    show_xtick_labels=False,
-)
-plot_paired_boxplots(
-    plt.subplot(3, 1, 3), "15x15 Grid\n(80 agents)", data_15, xlabel=True
-)
-
-legend_handles = [
-    Patch(facecolor=color, edgecolor=color, alpha=0.45, label=label)
-    for color, label in zip(controller_colors, controller_labels)
-]
-fig.legend(
-    handles=legend_handles,
-    loc="lower center",
-    bbox_to_anchor=(0.5, 0.01),
-    ncol=4,
-    fontsize="small",
-)
-
-plt.tight_layout(rect=(0.0, 0.05, 1.0, 1.0))
-plt.savefig("Figure_2.png", dpi=300)
-plt.show()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Render Figure 2")
+    parser.add_argument(
+        "--output-dir",
+        "-o",
+        default=str(Path(__file__).resolve().parent),
+        help="Directory to write the figure to (defaults to script directory)",
+    )
+    parser.add_argument("--no-show", action="store_true", help="Do not call plt.show()")
+    args = parser.parse_args()
+    main(output_dir=args.output_dir, show=(not args.no_show))

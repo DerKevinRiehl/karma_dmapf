@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from typing import Any, Dict, List, Tuple
-
+import argparse
+import os
+import matplotlib
 import matplotlib.pyplot as plt
+from pathlib import Path
+from typing import Any, Dict, List
+
 import pandas as pd
 
 # Folder containing summaries produced by analysis_4. Replace with your actual run.
-FOLDER = "log_files/analysis_4/"
+FOLDER = Path(__file__).resolve().parent.parent / "log_files" / "analysis_4"
 
 # Placeholders – replace with the concrete summary filenames you generate for each grid/agent setup.
 SUMMARY_FILES = [
@@ -95,6 +98,8 @@ def _plot_metric(
 def plot_tradeoffs(
     summary_dfs: List[pd.DataFrame],
     metadatas: List[Dict[str, Any]],
+    output_dir: str = str(Path(__file__).resolve().parent),
+    show: bool = True,
 ) -> None:
     if any(df.empty for df in summary_dfs):
         raise ValueError("One or more summaries are empty; run analysis_4 first.")
@@ -125,19 +130,45 @@ def plot_tradeoffs(
             framealpha=1.0,
         )
 
-        plt.show()
         plt.tight_layout(rect=(0.0, 0.05, 1.0, 1.0))
         safe_metric = metric.replace(" ", "_").replace("%", "perc").replace("/", "-")
-        fig.savefig(f"results/Figure_tradeoff_{safe_metric}.png", dpi=300)
-        fig.savefig(f"results/Figure_tradeoff_{safe_metric}.pdf", dpi=300)
-        plt.close(fig)
+
+        out_dir = Path(output_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        png_path = out_dir / f"Figure_tradeoff_{safe_metric}.png"
+        pdf_path = out_dir / f"Figure_tradeoff_{safe_metric}.pdf"
+        fig.savefig(str(png_path), dpi=300)
+        fig.savefig(str(pdf_path), dpi=300)
+
+        if show:
+            plt.show()
+        else:
+            plt.close(fig)
 
 
-if __name__ == "__main__":
+def main(
+    output_dir: str = str(Path(__file__).resolve().parent), show: bool = True
+) -> None:
+    if not show or os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+        matplotlib.use("Agg")
+
     summary_dfs: List[pd.DataFrame] = []
     metadatas: List[Dict] = []
     for fname in SUMMARY_FILES:
         df, meta = load_summary(fname)
         summary_dfs.append(df)
         metadatas.append(meta)
-    plot_tradeoffs(summary_dfs, metadatas)
+    plot_tradeoffs(summary_dfs, metadatas, output_dir=output_dir, show=show)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Render Figure 4 tradeoffs")
+    parser.add_argument(
+        "--output-dir",
+        "-o",
+        default=str(Path(__file__).resolve().parent),
+        help="Directory to write the figures to (defaults to script directory)",
+    )
+    parser.add_argument("--no-show", action="store_true", help="Do not call plt.show()")
+    args = parser.parse_args()
+    main(output_dir=args.output_dir, show=(not args.no_show))

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import os
 import json
+import argparse
+import matplotlib
+import matplotlib.pyplot as plt
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import pandas as pd
 
-folder = "log_files/analysis_3/"
+folder = Path(__file__).resolve().parent.parent / "log_files" / "analysis_3"
 FIGURE_WIDTH = 6.0 * 2
 FIGURE_HEIGHT = 3.0
 
@@ -34,15 +37,20 @@ CONTROLLER_COLORS = {
 
 
 def load_summary(summary_filename: str) -> tuple[pd.DataFrame, dict]:
-    base_dir = Path(__file__).resolve().parent.parent
-    summary_path = base_dir / folder / summary_filename
+    summary_path = folder / summary_filename
     data = json.loads(summary_path.read_text())
     summary_df = pd.DataFrame(data.get("summary", []))
     metadata = data.get("metadata", {})
     return summary_df, metadata
 
 
-def plot_influences(summary_dfs: list[pd.DataFrame], metadatas: list[dict]) -> None:
+def plot_influences(
+    summary_dfs: list[pd.DataFrame],
+    metadatas: list[dict],
+    output_dir: str = str(Path(__file__).resolve().parent),
+    show: bool = True,
+) -> None:
+
     if any(df.empty for df in summary_dfs):
         raise ValueError(
             "One or more summaries are empty; run the analysis script first."
@@ -119,15 +127,40 @@ def plot_influences(summary_dfs: list[pd.DataFrame], metadatas: list[dict]) -> N
 
     plt.tight_layout()
     fig.subplots_adjust(top=0.867, bottom=0.249, wspace=0.120)
-    fig.savefig("Figure_3.png", dpi=300)
-    plt.show()
+
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "Figure_3.png"
+    fig.savefig(str(out_path), dpi=300)
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
 
 
-if __name__ == "__main__":
+def main(
+    output_dir: str = str(Path(__file__).resolve().parent), show: bool = True
+) -> None:
+    if not show or os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+        matplotlib.use("Agg")
+
     summary_dfs: list[pd.DataFrame] = []
     metadatas: list[dict] = []
     for fname in SUMMARY_FILES:
         df, meta = load_summary(fname)
         summary_dfs.append(df)
         metadatas.append(meta)
-    plot_influences(summary_dfs, metadatas)
+    plot_influences(summary_dfs, metadatas, output_dir=output_dir, show=show)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Render Figure 3")
+    parser.add_argument(
+        "--output-dir",
+        "-o",
+        default=str(Path(__file__).resolve().parent),
+        help="Directory to write the figure to (defaults to script directory)",
+    )
+    parser.add_argument("--no-show", action="store_true", help="Do not call plt.show()")
+    args = parser.parse_args()
+    main(output_dir=args.output_dir, show=(not args.no_show))

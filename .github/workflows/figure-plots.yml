@@ -1,0 +1,54 @@
+name: Figure Plots CI
+
+on:
+    push:
+    pull_request:
+
+jobs:
+    render-figures:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.13"
+
+            - name: Upgrade pip
+              run: python -m pip install --upgrade pip
+
+            - name: Install dependencies
+              run: pip install -r requirements.txt
+
+            - name: Create output directory
+              run: mkdir -p ci_figures
+
+            - name: Render Figure 1
+              run: python src_figures/Figure_1.py --no-show --output-dir ci_figures
+
+            - name: Render Figure 2
+              run: python src_figures/Figure_2.py --no-show --output-dir ci_figures
+
+            - name: Render Figure 3
+              run: python src_figures/Figure_3.py --no-show --output-dir ci_figures
+
+            - name: Render Figure 4
+              run: python src_figures/Figure_4.py --no-show --output-dir ci_figures
+
+            - name: Verify outputs
+              run: |
+                  ls -la ci_figures
+                  test -f ci_figures/Figure_1.png
+                  test -f ci_figures/Figure_2.png
+                  test -f ci_figures/Figure_3.png
+                  if ! ls ci_figures/Figure_tradeoff_*.png >/dev/null 2>&1; then
+                    echo 'No Figure_tradeoff_*.png found' && exit 1
+                  fi
+
+            - name: Upload figures
+              uses: actions/upload-artifact@v4
+              with:
+                  name: figures
+                  path: ci_figures

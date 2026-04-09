@@ -1,10 +1,14 @@
 import json
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
+import argparse
+import os
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+import matplotlib
+import matplotlib.pyplot as plt
+
+# Constants / data paths
 folder = Path(__file__).resolve().parent.parent / "log_files" / "analysis_1"
 FIGURE_WIDTH = 6.0 * 2
 FIGURE_HEIGHT = 5.0
@@ -114,23 +118,48 @@ def plot_subplot(ax, controller_dfs, title=None, ylabel=None, show_legend=False)
         )  # transparent box)
 
 
-plot_data = build_plot_data()
+def main(
+    output_dir: str = str(Path(__file__).resolve().parent), show: bool = True
+) -> None:
+    if not show or os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+        matplotlib.use("Agg")
 
-fig, axes = plt.subplots(3, 4, figsize=(FIGURE_WIDTH, FIGURE_HEIGHT))
+    plot_data = build_plot_data()
+    fig, axes = plt.subplots(3, 4, figsize=(FIGURE_WIDTH, FIGURE_HEIGHT))
 
-for row_idx, grid_size in enumerate(grid_sizes):
-    for col_idx, controller_dfs in enumerate(plot_data[grid_size]):
-        ax = axes[row_idx, col_idx]
-        plot_subplot(
-            ax,
-            controller_dfs,
-            title=row_labels[col_idx] if row_idx == 0 else None,
-            ylabel=grid_labels[grid_size] if col_idx == 0 else None,
-            show_legend=(row_idx == 0 and col_idx == 0),
-        )
+    for row_idx, grid_size in enumerate(grid_sizes):
+        for col_idx, controller_dfs in enumerate(plot_data[grid_size]):
+            ax = axes[row_idx, col_idx]
+            plot_subplot(
+                ax,
+                controller_dfs,
+                title=row_labels[col_idx] if row_idx == 0 else None,
+                ylabel=grid_labels[grid_size] if col_idx == 0 else None,
+                show_legend=(row_idx == 0 and col_idx == 0),
+            )
 
-plt.subplots_adjust(
-    top=0.950, bottom=0.090, left=0.060, right=0.990, hspace=0.400, wspace=0.230
-)
-plt.savefig("Figure_1.png", dpi=300)
-plt.show()
+    plt.subplots_adjust(
+        top=0.950, bottom=0.090, left=0.060, right=0.990, hspace=0.400, wspace=0.230
+    )
+
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "Figure_1.png"
+    fig.savefig(str(out_path), dpi=300)
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Render Figure 1")
+    parser.add_argument(
+        "--output-dir",
+        "-o",
+        default=str(Path(__file__).resolve().parent),
+        help="Directory to write the figure to (defaults to script directory)",
+    )
+    parser.add_argument("--no-show", action="store_true", help="Do not call plt.show()")
+    args = parser.parse_args()
+    main(output_dir=args.output_dir, show=(not args.no_show))
