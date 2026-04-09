@@ -46,9 +46,3 @@ jobs:
                   if ! ls ci_figures/Figure_tradeoff_*.png >/dev/null 2>&1; then
                     echo 'No Figure_tradeoff_*.png found' && exit 1
                   fi
-
-            - name: Upload figures
-              uses: actions/upload-artifact@v4
-              with:
-                  name: figures
-                  path: ci_figures
