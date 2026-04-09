@@ -1,4 +1,5 @@
 # Karma Mechanisms for Decentralised, Cooperative Multi Agent Path Finding
+
 Kevin Riehl, Julius Schlapbach, Anastasious Kouvelas, Michail A. Makridis
 (ETH Zürich, Institute for Transport Planning and Systems (IVT))
 
@@ -17,14 +18,14 @@ Kevin Riehl, Julius Schlapbach, Anastasious Kouvelas, Michail A. Makridis
 - [Citation](#citation)
 </details>
 
-
 ## Introduction
-This is the online repository of "Karma Mechanisms for Decentralised, Cooperative Multi Agent Path Finding". This repository contains a Python-implementation of a warehouse-like MAPD simulation, in which robots with kinematic constraints (orientation-awareness) navigate on a two-dimensional grid, and pickup and dropoff randomly generated tasks. 
+
+This is the online repository of "Karma Mechanisms for Decentralised, Cooperative Multi Agent Path Finding". This repository contains a Python-implementation of a warehouse-like MAPD simulation, in which robots with kinematic constraints (orientation-awareness) navigate on a two-dimensional grid, and pickup and dropoff randomly generated tasks.
 
 <table>
 <tr>
 <td><img src="animations/animation_CENTRALIZED.gif" /></td>
-<td><img src="animations/animation_DECENTRALIZED_RESPECT.gif" /></td>
+<td><img src="animations/animation_DECENTRALIZED_TOKEN_PASSING.gif" /></td>
 </tr>
 <tr>
 <td><b><center>CBS (Centralised)</center></b></td>
@@ -56,16 +57,19 @@ This is the online repository of "Karma Mechanisms for Decentralised, Cooperativ
 </table>
 
 ## Abstract
-Multi-Agent Path Finding (MAPF) is a fundamental coordination problem in large-scale robotic and cyber-physical systems, where multiple agents must compute conflict-free trajectories with limited computational and communication resources. 
-While centralised optimal solvers provide guarantees on solution optimality, their exponential computational complexity limits scalability to large-scale systems and real-time applicability. 
+
+Multi-Agent Path Finding (MAPF) is a fundamental coordination problem in large-scale robotic and cyber-physical systems, where multiple agents must compute conflict-free trajectories with limited computational and communication resources.
+While centralised optimal solvers provide guarantees on solution optimality, their exponential computational complexity limits scalability to large-scale systems and real-time applicability.
 Existing decentralised heuristics are faster, but lead to suboptimal outcomes and result in high disparities in costs.
-This paper proposes a decentralised coordination framework for cooperative MAPF based on Karma mechanisms -- artificial, non-transferable credits that encode agents’ histories of cooperative behaviour and regulate future conflict resolution decisions. 
+This paper proposes a decentralised coordination framework for cooperative MAPF based on Karma mechanisms -- artificial, non-transferable credits that encode agents’ histories of cooperative behaviour and regulate future conflict resolution decisions.
 The approach formulates conflict resolution as a bilateral negotiation process that enables agents to resolve conflicts through pairwise replanning while promoting long-term fairness under limited communication and without global priority structures.
-The mechanism is evaluated in a lifelong robotic warehouse multi-agent pickup-and-delivery scenario with kinematic orientation constraints. 
-Unlike established, decentralised heuristics, the proposed Karma mechanism regulates the temporal distribution of replanning effort across agents, improving fairness while maintaining efficiency. 
+The mechanism is evaluated in a lifelong robotic warehouse multi-agent pickup-and-delivery scenario with kinematic orientation constraints.
+Unlike established, decentralised heuristics, the proposed Karma mechanism regulates the temporal distribution of replanning effort across agents, improving fairness while maintaining efficiency.
 
 ## What you will find in this repository
+
 This repository contains the simulation model and source code to reproduce the findings of our study. The folder contains following information:
+
 ```
 ./
 ├── annimations/
@@ -80,26 +84,32 @@ This repository contains the simulation model and source code to reproduce the f
 ```
 
 ## Installation Instructions
+
 Install dependencies with:
+
 ```
 pip install -r requirements.txt
 ```
 
 ## Run Instructions
+
 ### Run Simulation & Visualization
+
 You can run the simulation with different `mapf_control` settings and generate a GIF file, by executing:
+
 ```
 python _example_visualize_simulation.py
 ```
 
 There are multiple settings you can adjust at the beginning of the script:
+
 ```python
 simulation_settings = {
     "random_seed": 42,
     "grid_size": 20 + 2,  # 15,
     "n_agents": 180,
     # "mapf_control": MAPF_CONTROLLER_CENTRALIZED,
-    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+    # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_TOKEN_PASSING,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     # "mapf_control": MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
@@ -125,11 +135,15 @@ simulation_settings = {
 ```
 
 ### Run Simulation & Performance Evaluation
+
 You can run the simulation with different `mapf_control` settings and generate print statements about the performance of the controller during the simulation by executing:
+
 ```
 python _example_simulation_performance_tracking.py
 ```
+
 This generates a performance summary like:
+
 ```
 =====================================================
 Experiment Results for algorithm DECENTRALIZED_NEGOTIATE_ALTRUISTIC over 10 experiments
@@ -143,7 +157,9 @@ Distribution:    mean = 5.612 	 std = 0.174
 ```
 
 ### Replicate Findings from the paper
+
 To replicate the exact findings from the paper, you can execute the analysis scripts, which will generate log files similar to those stored in the log folder:
+
 ```
 python _analysis_1_efficiency_benchmark.py
 python _analysis_2_time_distribution.py
@@ -151,7 +167,9 @@ python _analysis_3_karma_influence.py
 python _analysis_4_karma_influence_sweep.py
 python _analysis_4_karma_influence_tradeoffs.py
 ```
+
 To render the visualizations, please exeute the scripts in `src_figures` folder:
+
 ```
 python Figure_1.py
 python Figure_2.py
@@ -160,7 +178,9 @@ python Figure_4.py
 ```
 
 ## Log Files
+
 In the folder `log_files` you will find the log files from each analysis stored in a dedicated folder:
+
 ```
 ./
 ├── ...
@@ -173,7 +193,9 @@ In the folder `log_files` you will find the log files from each analysis stored 
 ```
 
 ## Citation
+
 If you found this repository helpful, please cite our work:
+
 ```
 Kevin Riehl, Julius Schlapbach, Anastasios Kouvelas, Michail A. Makridis
 "Karma Mechanisms for Decentralised, Cooperative Multi Agent Path Finding", 2026.

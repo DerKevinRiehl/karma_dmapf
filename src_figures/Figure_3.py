@@ -18,7 +18,7 @@ SUMMARY_FILES = [
 ]
 
 CONTROLLER_LABELS = {
-    "DECENTRALIZED_RESPECT": "Token Passing",
+    "DECENTRALIZED_TOKEN_PASSING": "Token Passing",
     "DECENTRALIZED_NEGOTIATE_EGOISTIC": "Egoistic",
     "DECENTRALIZED_NEGOTIATE_ALTRUISTIC": "Altruistic",
     "DECENTRALIZED_NEGOTIATE_TRIP_KARMA": "Karma",
@@ -26,7 +26,7 @@ CONTROLLER_LABELS = {
 
 # Match Figure_2 palette
 CONTROLLER_COLORS = {
-    "DECENTRALIZED_RESPECT": "dodgerblue",
+    "DECENTRALIZED_TOKEN_PASSING": "dodgerblue",
     "DECENTRALIZED_NEGOTIATE_EGOISTIC": "olive",
     "DECENTRALIZED_NEGOTIATE_ALTRUISTIC": "green",
     "DECENTRALIZED_NEGOTIATE_TRIP_KARMA": "red",
@@ -119,7 +119,7 @@ def plot_influences(summary_dfs: list[pd.DataFrame], metadatas: list[dict]) -> N
 
     plt.tight_layout()
     fig.subplots_adjust(top=0.867, bottom=0.249, wspace=0.120)
-    fig.savefig("Figure_3_v2.png", dpi=300)
+    fig.savefig("Figure_3.png", dpi=300)
     plt.show()
 
 

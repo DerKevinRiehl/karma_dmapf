@@ -1,12 +1,13 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
+from pathlib import Path
 
-folder = "../log_files/analysis_2/"
+folder = Path(__file__).resolve().parent.parent / "log_files" / "analysis_2"
 FIGURE_WIDTH = 6.0
 FIGURE_HEIGHT = 8.0
 
 controller_file_names = [
-    "DECENTRALIZED_RESPECT",
+    "DECENTRALIZED_TOKEN_PASSING",
     "DECENTRALIZED_NEGOTIATE_EGOISTIC",
     "DECENTRALIZED_NEGOTIATE_ALTRUISTIC",
     "DECENTRALIZED_NEGOTIATE_TRIP_KARMA",
@@ -28,7 +29,7 @@ controller_colors = [
 
 
 def load_time_values(ftype, controller, grid_size, n_agents):
-    file_path = f"{folder}{ftype}_{controller}_{grid_size}_{n_agents}.txt"
+    file_path = folder / f"{ftype}_{controller}_{grid_size}_{n_agents}.txt"
     with open(file_path, "r") as file:
         values = [float(value) for value in file.read().splitlines() if value.strip()]
     return values
@@ -150,6 +151,6 @@ fig.legend(
     fontsize="small",
 )
 
-plt.tight_layout(rect=[0.0, 0.05, 1.0, 1.0])
+plt.tight_layout(rect=(0.0, 0.05, 1.0, 1.0))
 plt.savefig("Figure_2.png", dpi=300)
 plt.show()

@@ -353,8 +353,8 @@ class Agent:
 
         return None
 
-    def plan_route_decentralized_respectful(self) -> None:
-        # determine reservation_grid given all already planned routes
+    def plan_route_decentralized_token_passing(self) -> None:
+        # token-passing: determine reservation grid given all already planned routes
         reservation_grid = GridTools.create_3D_reservation_grid(
             environment=self.environment,
             time_horizon=self.environment.get_sufficient_planning_horizon(),

@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 import numpy as np
 from constants import (
     MAPF_CONTROLLER_CENTRALIZED,
-    MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+    MAPF_CONTROLLER_DECENTRALIZED_TOKEN_PASSING,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC2,
@@ -109,8 +109,10 @@ class Environment:
         # ROUTE PLANNING: for those who need
         if self.settings["mapf_control"] == MAPF_CONTROLLER_CENTRALIZED:
             self.handle_agents_route_planning_centralized()
-        elif self.settings["mapf_control"] == MAPF_CONTROLLER_DECENTRALIZED_RESPECT:
-            self.handle_agents_route_planning_decentralized_respect()
+        elif (
+            self.settings["mapf_control"] == MAPF_CONTROLLER_DECENTRALIZED_TOKEN_PASSING
+        ):
+            self.handle_agents_route_planning_decentralized_token_passing()
         elif (
             self.settings["mapf_control"]
             == MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC
@@ -244,9 +246,10 @@ class Environment:
                     "Centralized planning failed to find a solution, consider adjusting parameters or using a different controller."
                 )
 
-    def handle_agents_route_planning_decentralized_respect(self) -> None:
+    def handle_agents_route_planning_decentralized_token_passing(self) -> None:
         """
-        This works as follows: every new agent will plan its route around already existing planned routes, no negotiation, just adaption to others.
+        Token-passing: every new agent plans its route around
+        already existing planned routes; no negotiation, just adaptation to others.
         """
         self.print_debug_log()
 
@@ -259,7 +262,7 @@ class Environment:
             and len(agent.target_position) == 2
         ]
         for agent in planning_relevant_agents:
-            agent.plan_route_decentralized_respectful()
+            agent.plan_route_decentralized_token_passing()
 
     def plan_shortest_path_given_considerations(self, agents_considered, agent):
         reservation_grid = GridTools.create_3D_reservation_grid(
@@ -547,7 +550,7 @@ class Environment:
                 if self.settings["debug_statements"]:
                     print("\tsuccessfully done")
             else:
-                # otherwise use planning respectfully (conflict-avoiding)
-                agent.plan_route_decentralized_respectful()
+                # otherwise use token-passing planning (conflict-avoiding)
+                agent.plan_route_decentralized_token_passing()
                 if self.settings["debug_statements"]:
                     print("\tnegotiations failed")

@@ -2,7 +2,7 @@
 
 This script mirrors the core mechanics of ``_karma_influence_sweep.py`` but
 targets one grid size and one agent count. It sweeps only the karma influence
-parameter (delta is fixed to 1.0) for four controllers: respect, egoistic,
+parameter (delta is fixed to 1.0) for four controllers: token-passing, egoistic,
 altruistic, and trip-karma. Seeded runs are parallelized. Results are written
 to a timestamped folder under ``results/`` and aggregated into a single
 ``summary.json`` stored both in that folder and in ``src/log_files/analysis_3/summary.json``
@@ -28,7 +28,7 @@ from constants import (
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
-    MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+    MAPF_CONTROLLER_DECENTRALIZED_TOKEN_PASSING,
 )
 from environment import Environment
 from planner_path_astar import AStarPathPlanner
@@ -86,7 +86,7 @@ BASE_SIMULATION_SETTINGS: Dict[str, Any] = {
 }
 
 CONTROLLERS = [
-    MAPF_CONTROLLER_DECENTRALIZED_RESPECT,
+    MAPF_CONTROLLER_DECENTRALIZED_TOKEN_PASSING,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_EGOISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_ALTRUISTIC,
     MAPF_CONTROLLER_DECENTRALIZED_NEGOTIATE_TRIP_KARMA,
